@@ -1,0 +1,1 @@
+const fs = require('fs'); const filePath = 'src/components/ToastEditor.tsx'; let content = fs.readFileSync(filePath, 'utf8'); const newContent = content.replace(/\/\*\*\s*\*\s*编辑器初始化预加载优化[\s\S]*?\}, \[\]\);\s*\/\*\*\s*\*\s*优化KaTeX渲染性能[\s\S]*?\}, \[\]\);/g, ''); fs.writeFileSync(filePath, newContent, 'utf8'); console.log('成功修复ToastEditor.tsx');

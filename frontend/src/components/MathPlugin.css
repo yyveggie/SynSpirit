@@ -1,0 +1,62 @@
+/* LaTeX公式样式 */
+.latex-inline {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+.latex-block {
+  display: block;
+  margin: 1em auto;
+  text-align: center;
+}
+
+/* 编辑模式下的LaTeX元素样式 - 移除虚线边框 */
+[data-latex] {
+  background-color: transparent;
+  border: none;
+  border-radius: 3px;
+  padding: 2px 4px;
+  user-select: all;
+  cursor: pointer;
+}
+
+/* 用于内联LaTeX公式的编辑视图样式 */
+span.latex-inline {
+  color: #007bff;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+/* 用于块级LaTeX公式的编辑视图样式 */
+div.latex-block {
+  color: #007bff;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  background-color: transparent;
+  padding: 0.5em;
+  margin: 1em 0;
+  border-radius: 4px;
+}
+
+/* KaTeX渲染输出的额外样式 */
+.katex {
+  font-size: 1.1em;
+  color: #007bff;
+}
+
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 0;
+}
+
+/* 错误样式 */
+.latex-error {
+  color: #dc3545;
+  font-family: 'Courier New', monospace;
+  background-color: rgba(220, 53, 69, 0.1);
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(220, 53, 69, 0.3);
+} 

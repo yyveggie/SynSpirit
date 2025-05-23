@@ -1,0 +1,38 @@
+{% extends 'admin/base.html' %}
+{% set form_title = '添加新类别' if not category_id else '编辑类别' %}
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ form_title }}</h1>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+{# Determine form action URL based on adding or editing #}
+{% set form_action = url_for('admin.add_category') if not category_id else url_for('admin.edit_category', category_id=category_id) %}
+
+<form method="POST" action="{{ form_action }}">
+    {# Add CSRF token if using Flask-WTF #}
+    <div class="mb-3">
+        <label for="name" class="form-label">类别名称 <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ form.name or '' }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="description" class="form-label">描述</label>
+        <textarea class="form-control" id="description" name="description" rows="3">{{ form.description or '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">{{ '添加' if not category_id else '更新' }}</button>
+    <a href="{{ url_for('admin.manage_categories') }}" class="btn btn-secondary">取消</a>
+</form>
+
+{% endblock %} 

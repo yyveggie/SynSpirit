@@ -1,0 +1,165 @@
+/* 懒加载图片样式 */
+.lazy-load {
+  opacity: 0;
+  transition: opacity 0.5s ease, filter 0.5s ease;
+  will-change: opacity, filter;
+  transform: translateZ(0); /* 开启GPU加速 */
+  transform: translate3d(0,0,0); /* 增强图层独立性 */
+  background-color: rgba(0, 0, 0, 0.05); /* 加载前的背景色 */
+  contain: paint; /* 包含绘制操作 */
+  content-visibility: auto; /* 自动管理渲染时机 */
+  contain-intrinsic-size: auto 300px; /* 提供预估尺寸 */
+}
+
+.lazy-loaded {
+  opacity: 1;
+  transition: opacity 0.5s ease;
+  will-change: auto; /* 加载完成后释放资源 */
+  backface-visibility: hidden; /* 防止闪烁 */
+}
+
+/* 滚动时禁用过渡动画，提高性能 */
+.scrolling .lazy-load,
+.scrolling .lazy-loaded {
+  transition: none !important;
+  animation-play-state: paused !important;
+  animation-duration: 0.01ms !important;
+  will-change: auto !important; /* 滚动时释放资源 */
+  pointer-events: none !important; /* 滚动时禁用交互 */
+}
+
+/* 模糊效果淡入淡出 */
+.blur-effect {
+  filter: blur(10px);
+  transition: filter 0.5s ease;
+  transform: translateZ(0); /* 确保独立图层 */
+  will-change: filter;
+}
+
+.blur-effect.lazy-loaded {
+  filter: blur(0);
+}
+
+/* 滚动时关闭模糊过渡效果 */
+.scrolling .blur-effect {
+  transition: none !important;
+  will-change: auto !important; /* 释放资源 */
+}
+
+/* 加载时呈现的占位样式 */
+.lazy-image-placeholder {
+  background: linear-gradient(
+    90deg, 
+    rgba(255, 255, 255, 0.05) 0%, 
+    rgba(255, 255, 255, 0.1) 50%, 
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: loading-pulse 1.5s ease-in-out infinite;
+  border-radius: 4px;
+  will-change: background-position;
+}
+
+/* 滚动时暂停占位动画 */
+.scrolling .lazy-image-placeholder {
+  animation-play-state: paused !important;
+  animation: none !important; /* 完全停止动画 */
+  background-position: 0 0 !important; /* 固定背景位置 */
+}
+
+/* 错误状态显示 */
+.lazy-image-error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 0.875rem;
+  text-align: center;
+  border-radius: 4px;
+  contain: strict; /* 隔离内容 */
+  z-index: 1;
+}
+
+.lazy-image-error span {
+  background-color: rgba(239, 68, 68, 0.8);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transform: translateZ(0); /* 创建独立图层 */
+}
+
+/* 载入动画 - 优化性能 */
+@keyframes loading-pulse {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: -200% 0%;
+  }
+}
+
+/* 低质量图片预览模糊效果 */
+.lazy-preview-blur {
+  filter: blur(20px);
+  transform: scale(1.1); /* 稍微放大以避免模糊后边缘出现 */
+  transition: filter 0.5s ease, transform 0.5s ease;
+  will-change: filter, transform;
+  backface-visibility: hidden; /* 优化3D变换 */
+}
+
+.lazy-preview-blur.lazy-loaded {
+  filter: blur(0);
+  transform: scale(1);
+}
+
+/* 滚动时禁用所有模糊预览效果 */
+.scrolling .lazy-preview-blur {
+  transition: none !important;
+  will-change: auto !important;
+  filter: none !important;
+  transform: scale(1) !important;
+}
+
+/* 包装容器，防止图片加载和布局变化 */
+.lazy-image-wrapper {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  transform: translateZ(0); /* 促进图层合成 */
+  will-change: transform; /* 优化性能 */
+  contain: layout paint style; /* 隔离布局、绘制和样式影响 */
+}
+
+/* 保持宽高比 */
+.lazy-image-wrapper[data-aspect-ratio] {
+  height: 0;
+  padding-bottom: calc(100% / var(--aspect-ratio));
+  contain: strict; /* 严格隔离内容 */
+}
+
+.lazy-image-wrapper[data-aspect-ratio] img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.5s ease;
+  will-change: opacity;
+  backface-visibility: hidden;
+}
+
+/* 快速滚动时的极限优化 */
+.rapid-scroll .lazy-image-wrapper,
+.rapid-scroll .lazy-load,
+.rapid-scroll .lazy-loaded {
+  animation: none !important;
+  transition: none !important;
+  will-change: auto !important;
+  content-visibility: auto !important;
+  transform: translateZ(0) !important;
+} 

@@ -1,0 +1,1277 @@
+/* --- 增强防闪屏解决方案 --- */
+/* 在index.css顶部添加，确保这些样式最先应用 */
+
+/* 立即应用背景色的关键代码 */
+:root {
+  /* 强制使用深色方案，确保所有浏览器实例共享相同的方案 */
+  color-scheme: dark;
+  
+  /* 全局背景颜色变量 - 集中定义所有背景相关样式 */
+  --bg-base-color: #437a7a;
+}
+
+/* 立即设置HTML和body的背景色和颜色 - 保留主要背景设置 */
+html {
+  background-color: var(--bg-base-color) !important;
+  background-image: -webkit-linear-gradient(45deg, #437a7a, #632147) !important;
+  background-image: linear-gradient(45deg, #437a7a, #632147) !important;
+  color: white;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  color: white;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* 确保导航栏始终在顶层，不被动态时间栏覆盖 */
+nav {
+  position: relative;
+  z-index: 50;
+}
+
+/* 动态时间栏的样式调整，确保不会覆盖导航栏 */
+.timeline-view-active .fixed[class*="right-0"][class*="overflow-y-auto"] {
+  top: var(--navbar-height, 0px);
+  height: calc(100vh - var(--navbar-height, 0px));
+  z-index: 40;
+}
+
+/* 移除重复的预加载背景设置 */
+/* @media all {
+  html::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background: linear-gradient(32deg, #61177c,#004d65);
+    pointer-events: none;
+  }
+} */
+
+/* --- 性能优化相关CSS --- */
+/* 滚动时的全局性能优化 - 增强版 */
+.scrolling * {
+  animation-play-state: paused !important;
+  transition: none !important;
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
+
+/* 使用内容隔离提高性能 - 更精细的控制 */
+.contain-layout {
+  contain: layout;
+}
+
+.contain-paint {
+  contain: paint;
+}
+
+.contain-strict {
+  contain: strict;
+}
+
+/* 启用GPU加速 - 更全面的优化 */
+.gpu-accelerated {
+  transform: translateZ(0);
+  transform: translate3d(0,0,0);
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000;
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+  -webkit-backface-visibility: hidden;
+  -webkit-perspective: 1000;
+}
+
+/* 防止滚动过程中的布局抖动 - 更全面的优化 */
+.scroll-content * {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 5000px;
+  overscroll-behavior: none;
+}
+
+/* 提升虚拟列表渲染性能 - 更多的细节优化 */
+[data-virtuoso-scroller] {
+  content-visibility: auto;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  z-index: 0;
+}
+
+/* 增加全屏滚动的性能优化 */
+html, body {
+  overscroll-behavior-y: none;
+}
+
+/* 进一步减少滚动时的重绘 - 新增 */
+@media (prefers-reduced-motion: no-preference) {
+  html.is-scrolling * {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+
+/* 使用layer compositor提高性能 - 新增 */
+.composited-layer {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+  isolation: isolate;
+}
+
+/* 优化静态内容的缓存性能 - 新增 */
+.static-content {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+  contain: content;
+}
+
+/* 滚动优化对象类选择器 - 新增 */
+.article-card, .dynamic-card, .comments-glass-panel, 
+.media-carousel-container, .lazy-image-wrapper {
+  will-change: transform;
+  transform: translateZ(0);
+  z-index: 1;
+}
+
+/* 当文档处于滚动状态时，向body添加这个类 - 新增 */
+body.is-scrolling {
+  pointer-events: none;
+}
+
+body.is-scrolling .interactive-element {
+  pointer-events: auto;
+}
+
+/* 滚动快速时优化渲染层 - 新增 */
+.rapid-scroll * {
+  visibility: visible !important;
+  transform: translateZ(0) !important;
+  opacity: 1 !important;
+  filter: none !important;
+  content-visibility: visible;
+  overflow: hidden;
+  will-change: transform;
+}
+
+/* 主要CSS样式的其余部分 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 导入Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Lato:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); /* Import Inter font */
+
+@layer base {
+  /* 强制覆盖HTML根元素的背景色 - 移除重复设置 */
+  html, html.bg-indigo-900 {
+    scroll-behavior: smooth;
+    /* 移除重复的背景设置，已在顶部定义 */
+    height: 100%; /* Ensure html takes full height */
+  }
+  
+  body {
+    margin: 0;
+    /* 移除重复的背景设置，已在顶部定义 */
+    color: white;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', /* Use Inter first */
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    
+    /* 滚动优化 */
+    -webkit-overflow-scrolling: touch; /* 在iOS上启用惯性滚动 */
+    height: 100%; /* Ensure body takes full height */
+  }
+    
+  /* 暗色主题基础设置，避免任何白屏闪烁 - 已在顶部定义，这里移除重复 */
+  /* :root {
+    color-scheme: dark;
+  } */
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif font-semibold; /* Use Inter as base, keep serif for differentiation if needed, added font-semibold */
+    font-family: 'Inter', sans-serif; /* Ensure Inter is used for headings */
+  }
+  
+  h1 {
+    @apply text-4xl font-medium mb-4;
+  }
+  
+  h2 {
+    @apply text-3xl font-medium mb-3;
+  }
+  
+  h3 {
+    @apply text-2xl font-medium mb-2;
+  }
+
+  /* 简化根元素样式，移除重复背景设置 */
+  #root {
+    width: 100%;
+    overflow-x: hidden; /* 强制阻止根元素的水平滚动 */
+    position: relative;
+    @apply h-screen flex flex-col; /* Use h-screen and flex utilities */
+  }
+  
+  /* 移除伪元素背景，不再需要 */
+  /*
+  #root::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    @apply bg-gradient-to-br from-indigo-900 via-indigo-800 to-purple-900;
+    transform-origin: center center;
+    pointer-events: none;
+  }
+  */
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-md transition-all duration-300 font-medium;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary-600 hover:bg-secondary-700 text-white;
+  }
+  
+  .btn-outline {
+    @apply border border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white;
+  }
+  
+  .card {
+    @apply rounded-lg p-6 transition-all duration-300;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    /* 移除毛玻璃效果和半透明背景，改为只使用边框样式 */
+    @apply border border-indigo-600/30 shadow-md;
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out; /* Add transition for hover/active */
+  }
+  
+  /* General card hover and active states */
+  .card-interactive { /* Apply this class to cards that should have hover/active effects */
+     @apply transition-all duration-200 ease-out;
+     will-change: transform, box-shadow; /* Keep GPU hint */
+     transform: translateZ(0); /* Keep GPU hint */
+     backface-visibility: hidden; /* Keep GPU hint */
+  }
+  /* Restore a very subtle scale effect */
+  .card-interactive:hover,
+  .card-interactive:focus-within {
+    @apply shadow-lg scale-[1.005]; /* Added subtle scale */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2); /* Enhanced shadow */
+  }
+  /* Keep active state without scale */
+  .card-interactive:active {
+      @apply shadow-md; /* Example: Slightly reduce shadow on active */
+      transition-duration: 0.1s;
+  }
+  
+  .card h3 {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+
+  .card p {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  
+  .card-hover {
+    @apply hover:shadow-md hover:-translate-y-1;
+  }
+  
+  .input {
+    @apply bg-white border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+  }
+  
+  /* 滚动动画类 */
+  .scroll-animate {
+    @apply transition-transform duration-500 ease-out;
+  }
+  
+  .scroll-animate-slow {
+    @apply transition-transform duration-700 ease-out;
+  }
+
+  /* 文章页使用的确切渐变色 */
+  .bg-rationality {
+    @apply bg-gradient-to-br from-amber-400 via-orange-500 to-red-500;
+  }
+  .bg-modeling {
+    @apply bg-gradient-to-br from-indigo-400 via-purple-500 to-pink-500;
+  }
+  .bg-optimization {
+    @apply bg-gradient-to-br from-emerald-300 via-teal-400 to-cyan-500;
+  }
+  .bg-ai-safety {
+    @apply bg-gradient-to-br from-red-300 via-pink-400 to-purple-500;
+  }
+  .bg-ai-strategy {
+    @apply bg-gradient-to-br from-blue-300 via-indigo-400 to-violet-500;
+  }
+  .bg-practical {
+    @apply bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-500;
+  }
+
+  /* 新增淡绿色与粉色渐变背景 */
+  .bg-lynn-gradient {
+    @apply bg-gradient-to-br from-green-200 via-teal-200 to-pink-200;
+  }
+
+  /* --- 新增：精选工具卡片样式（毛玻璃效果） --- */
+  /*
+  .featured-tool-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit; 
+    background-color: rgba(255, 255, 255, 0.1); 
+    backdrop-filter: blur(10px); 
+    -webkit-backdrop-filter: blur(10px); 
+    z-index: 5; 
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15); 
+    transition: background-color 0.3s ease;
+  }
+
+  .featured-tool-card:hover::before {
+    background-color: rgba(255, 255, 255, 0.2); 
+  }
+  */
+  /* --- 结束新增 --- */
+
+  /* 确保卡片内容在毛玻璃效果之上 */
+  .featured-tool-card > *:not(img):not(::before) {
+    position: relative; 
+    z-index: 10;
+  }
+  /* 确保背景图片在最底层 */
+  .featured-tool-card > img {
+     z-index: 1;
+  }
+
+  /* --- 新增：隐藏滚动条 --- */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  /* --- 结束新增 --- */
+
+  /* Capsule tag style - can be applied via Tailwind directly too */
+  .tag-capsule {
+    @apply inline-block rounded-full px-3 py-1 text-xs font-medium leading-none;
+  }
+}
+
+/* 额外的动画效果 */
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.float-up {
+  animation: floatUp 0.5s ease-out;
+}
+
+@keyframes floatUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* 未来感设计元素 */
+.glass-effect {
+  @apply bg-dark-900 border border-dark-700/50;
+}
+
+.neon-border {
+  @apply border border-primary-500 shadow-glow;
+}
+
+.gradient-text {
+  @apply text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-secondary-400;
+}
+
+.grid-pattern {
+  background-image: 
+    linear-gradient(rgba(14, 165, 233, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 165, 233, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.bg-pattern {
+  background-image: radial-gradient(circle at 25px 25px, rgba(255, 255, 255, 0.2) 2%, transparent 0%),
+    radial-gradient(circle at 75px 75px, rgba(255, 255, 255, 0.2) 2%, transparent 0%);
+  background-size: 100px 100px;
+  background-position: 0 0;
+}
+
+/* 英雄区背景图 */
+.bg-hero-image {
+  background: linear-gradient(to right bottom, #334155, #0f172a);
+  background-size: cover;
+  background-position: center;
+}
+
+/* 嵌入视频的响应式样式 */
+.embed-responsive {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 2rem 0;
+  overflow: hidden;
+}
+
+.embed-responsive::before {
+  content: "";
+  display: block;
+}
+
+.embed-responsive-16by9::before {
+  padding-top: 56.25%; /* 16:9 宽高比 */
+}
+
+.embed-responsive .embed-responsive-item,
+.embed-responsive iframe {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* 视频播放器在暗色主题下的样式调整 */
+.prose .embed-responsive {
+  margin: 2.5em 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Style global markdown content */
+.markdown-content {
+  @apply text-gray-800 leading-relaxed;
+}
+
+.markdown-content h1 {
+  @apply text-3xl font-bold mt-8 mb-4 text-gray-900;
+}
+
+.markdown-content h2 {
+  @apply text-2xl font-bold mt-6 mb-3 text-gray-900;
+}
+
+.markdown-content h3 {
+  @apply text-xl font-bold mt-5 mb-2 text-gray-900; 
+}
+
+.markdown-content p {
+  @apply mb-4;
+}
+
+.markdown-content ul {
+  @apply list-disc pl-5 mb-4;
+}
+
+.markdown-content ol {
+  @apply list-decimal pl-5 mb-4;
+}
+
+.markdown-content li {
+  @apply mb-1;
+}
+
+.markdown-content a {
+  @apply text-blue-600 hover:text-blue-800 hover:underline;
+}
+
+.markdown-content blockquote {
+  @apply pl-4 border-l-4 border-gray-300 text-gray-700 italic my-4;
+}
+
+.markdown-content code {
+  @apply bg-gray-100 rounded px-1 py-0.5 font-mono text-sm;
+}
+
+.markdown-content pre {
+  @apply bg-gray-800 text-white rounded p-4 overflow-x-auto mb-4;
+}
+
+.markdown-content pre code {
+  @apply bg-transparent text-white p-0;
+}
+
+.markdown-content img {
+  @apply max-w-full rounded my-4;
+}
+
+/* 帖子详情页面的图片和视频样式 */
+.post-content-display img {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  max-width: 100%;
+  height: auto;
+}
+
+/* 视频大小限制 - 适用于帖子 */
+.post-content-display iframe {
+  max-width: 80% !important;
+  margin: 0 auto !important;
+  display: block !important;
+}
+
+/* 带外边距的视频容器 - 适用于帖子 */
+.post-content-display div[style*="position: relative; padding-bottom: 56.25%"] {
+  max-width: 80% !important;
+  margin: 1.5rem auto !important;
+}
+
+/* 文章内容的图片和视频样式 */
+.article-content img {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  max-width: 100%;
+  height: auto;
+}
+
+/* 视频大小限制 - 适用于文章 */
+.article-content iframe {
+  max-width: 80% !important;
+  margin: 0 auto !important;
+  display: block !important;
+}
+
+/* 带外边距的视频容器 - 适用于文章 */
+.article-content div[style*="position: relative; padding-bottom: 56.25%"] {
+  max-width: 80% !important;
+  margin: 1.5rem auto !important;
+}
+
+.markdown-content hr {
+  @apply my-6 border-gray-300;
+}
+
+.markdown-content table {
+  @apply min-w-full border border-gray-300 my-4;
+}
+
+.markdown-content th {
+  @apply border border-gray-300 bg-gray-100 px-4 py-2 text-left;
+}
+
+.markdown-content td {
+  @apply border border-gray-300 px-4 py-2;
+}
+
+.article-banner {
+  height: 200px;
+}
+
+@media (min-width: 768px) {
+  .article-banner {
+    height: 300px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .article-banner {
+    height: 400px;
+  }
+}
+
+/* Show paragraph comment icon on hover */
+.commentable-paragraph:hover > .paragraph-comment-icon {
+  opacity: 1;
+}
+
+/* 页面过渡效果 - 使用更平滑的淡入淡出 */
+.page-transition-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+.page-transition-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+.page-transition-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 300ms, transform 300ms;
+}
+
+/* 全局路由转场效果 */
+.route-transition-enter {
+  opacity: 0;
+}
+.route-transition-enter-active {
+  opacity: 1;
+  transition: opacity 300ms ease-in;
+}
+.route-transition-exit {
+  opacity: 1;
+}
+.route-transition-exit-active {
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+}
+
+/* 强制移除只读内容中 iframe 的边框和背景 */
+.ck.ck-editor__editable.ck-read-only iframe,
+.ck-read-only .ck-content iframe {
+    border: none !important;
+    background: transparent !important;
+    display: block !important; /* 确保是块级元素 */
+    margin: 0.75em auto !important; /* 保持上下间距 */
+    max-width: 80% !important; /* 限制最大宽度 */
+}
+
+/* 移除可能由 figure 包裹 iframe 带来的边框或背景 */
+.ck.ck-editor__editable.ck-read-only figure.media,
+.ck-read-only .ck-content figure.media {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important; 
+}
+
+/* 使 prose 中的 hr 更透明 */
+.prose hr,
+.prose-invert hr {
+    border-color: rgba(255, 255, 255, 0.1) !important; /* 设置为白色半透明，可调整透明度 */
+}
+
+/* 添加全局滚动优化 */
+* {
+  /* 使用 CSS 合成器优化滚动，避免重绘 */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* 性能优化 - 为动画元素添加硬件加速 */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimize scrolling performance */
+html, body {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Optimize animations */
+.transition-all,
+.transition-transform,
+.transition-colors,
+.transition-opacity,
+.animate-spin,
+.animate-pulse,
+.animate-bounce {
+  will-change: auto;
+  backface-visibility: hidden;
+}
+
+/* Add GPU acceleration to card transitions and interactions */
+.card-interactive {
+  will-change: transform, box-shadow;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.card-interactive:hover {
+  @apply shadow-xl scale-[1.005]; /* Added subtle scale */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.card-interactive:active {
+  @apply shadow-lg; /* Keep no scale */
+  transition-duration: 0.1s;
+}
+
+/* Add GPU acceleration to scrollable containers */
+.overflow-auto,
+.overflow-y-auto,
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
+}
+
+/* Enhance feature tool cards with parallax effect */
+.featured-tool-card img {
+  transform: translateZ(0);
+  will-change: transform;
+  transition: transform 0.4s ease-out;
+}
+
+.featured-tool-card:hover img {
+  transform: translateZ(0) scale(1.05) translateY(-5px);
+}
+
+/* 模态窗口样式 */
+#modal-root {
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#modal-root .modal-container {
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+#modal-root .modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1000;
+}
+
+#modal-root .modal-content {
+  background-color: rgba(31, 41, 55, 0.9);
+  border-radius: 0.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-height: 90vh;
+  overflow: auto;
+  width: 100%;
+  border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+/* 修复移动端模态窗口的尺寸问题 */
+@media (max-width: 640px) {
+  #modal-root .modal-wrapper {
+    width: 95%;
+    max-width: 95%;
+    padding: 0;
+  }
+}
+
+/* 动态窗口相关样式 */
+.dynamic-glassmorphism {
+  background: rgba(17, 25, 40, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.125);
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.dynamic-content {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+}
+
+.dynamic-hover-effect {
+  transition: all 0.25s ease;
+}
+
+.dynamic-hover-effect:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-3px);
+}
+
+.interaction-button {
+  transition: all 0.2s ease;
+}
+
+.interaction-button:hover {
+  transform: scale(1.05);
+}
+
+.interaction-button:active {
+  transform: scale(0.95);
+}
+
+/* 增强模态窗口相关样式 */
+#modal-root .modal-wrapper {
+  /* 移除之前的固定宽度和内边距，让内容决定宽度 */
+  /* width: 100%; */
+  /* max-width: 42rem; */ 
+  /* padding: 0; */
+}
+
+#modal-root .modal-content {
+  /* 使用新的类或直接应用样式到 DynamicDetailView 根元素 */
+  background: transparent !important; /* 父级接管背景 */
+  border-radius: 0.75rem !important; /* rounded-lg */
+  box-shadow: none !important; /* 父级接管阴影 */
+  max-height: none !important; /* 高度由内部内容决定 */
+  overflow: visible !important; /* 允许内部滚动 */
+  width: auto !important; /* 宽度由内部内容决定 */
+  max-width: 90vw !important; /* 限制最大宽度 */
+  border: none !important; /* 移除边框 */
+}
+
+#modal-root .modal-backdrop {
+  backdrop-filter: blur(12px); /* 增加背景模糊 */
+  -webkit-backdrop-filter: blur(12px);
+  background-color: rgba(0, 0, 0, 0.7); /* 背景更暗 */
+}
+
+/* --- 流动渐变背景 --- */
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.bg-gradient-flow {
+  /* --- 科幻感渐变色 (方案一：深邃蓝紫) --- */
+  /* background: linear-gradient(-45deg, #0b0f19, #1f143b, #1a2a6c, #0f0c29);  */
+  /* 其他方案，可取消注释替换 */
+  /* background: linear-gradient(-45deg, #23074d, #cc5333, #4a00e0, #8e2de2); */
+  background: linear-gradient(-45deg, #0ff0fc, #7a5afc, #031a4d, #0f0c29);
+
+  background-size: 400% 400%; /* 必须设置，让渐变范围远大于屏幕 */
+  animation: gradient-flow 15s ease infinite; /* 应用动画，调整 15s 控制速度 */
+}
+
+/* --- 卡片进入动画 --- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { 
+  animation: fadeInUp 0.5s ease-out forwards; 
+}
+
+/* 3D翻转动画效果 */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-gpu {
+  transform: translateZ(0);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.rotate-y-0 {
+  transform: rotateY(0deg);
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.rotate-y-minus-180 {
+  transform: rotateY(-180deg);
+}
+
+.duration-600 {
+  transition-duration: 600ms;
+}
+
+/* 确保翻转过程中内容不可见，防止闪烁 */
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+/* 统一网格和卡片样式 */
+.community-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem; /* 使用rem单位，对应tailwind的gap-5 */
+  padding: 1rem;
+}
+
+.community-card {
+  @apply rounded-lg overflow-hidden bg-indigo-900/20 border border-indigo-800/30;
+}
+
+/* 改进卡片过渡效果 */
+.card-interactive {
+  will-change: transform, box-shadow;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.card-interactive:hover {
+  @apply shadow-xl scale-[1.005]; /* Added subtle scale */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.card-interactive:active {
+  @apply shadow-lg; /* Keep no scale */
+  transition-duration: 0.1s;
+}
+
+/* Add custom spin animation if not already present and a slow version */
+@layer utilities {
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin-slow {
+    animation: spin 2s linear infinite; /* Make it spin slower (2 seconds per revolution) */
+  }
+}
+
+/* Ensure keyframes are defined if base Tailwind doesn't include them by default */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 评论区打开时的样式调整 */
+.comments-open .dynamic-feed-container,
+.comments-open #dynamic-feed {
+  transition: all 0.3s ease-in-out !important;
+  transform: translateX(400px) !important;
+  opacity: 0.85 !important;
+}
+
+@media (max-width: 768px) {
+  .comments-open .dynamic-feed-container,
+  .comments-open #dynamic-feed {
+    transform: translateX(100%) !important;
+    opacity: 0.5 !important;
+  }
+}
+
+/* 让评论区和文章内容并排显示的样式 */
+.expanded-with-comments {
+  transition: all 0.3s ease-in-out;
+  max-width: calc(100% - 20px);
+}
+
+@media (min-width: 768px) {
+  .expanded-with-comments {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* --- SynSpirit Dynamic Display Board - Letter Flip Animation --- */
+
+@keyframes letterVerticalFlip {
+  0% {
+    transform: rotateX(90deg); 
+    opacity: 0;
+    text-shadow: 0 0 5px rgba(139, 92, 246, 0); /* Indigo glow, initially transparent */
+  }
+  40% { /* Faster to become visible and start overshooting */
+    transform: rotateX(-20deg); /* Increased overshoot for more dynamism */
+    opacity: 1;
+    text-shadow: 0 0 15px rgba(139, 92, 246, 0.7), 0 0 25px rgba(139, 92, 246, 0.5); /* Bright indigo glow */
+  }
+  70% { /* Settling back */
+    transform: rotateX(10deg);
+    opacity: 1;
+    text-shadow: 0 0 10px rgba(139, 92, 246, 0.4), 0 0 15px rgba(139, 92, 246, 0.3); /* Fading glow */
+  }
+  100% {
+    transform: rotateX(0deg);   
+    opacity: 1;
+    text-shadow: 0 0 5px rgba(139, 92, 246, 0.1); /* Subtle resting glow */
+  }
+}
+
+.flipping-letter {
+  display: inline-block; 
+  opacity: 0; 
+  transform-origin: center 50%; 
+  transform-style: preserve-3d; 
+  backface-visibility: hidden; 
+  animation-name: letterVerticalFlip;
+  animation-duration: 0.8s; /* Slightly longer duration for the more complex animation */
+  animation-fill-mode: forwards;
+  animation-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Custom easeOutBack with more overshoot */
+  color: #e0e0e0; /* Slightly off-white for better glow visibility if needed */
+}
+
+.letter-container { 
+  width: 100%; 
+}
+
+/* --- End SynSpirit Animation --- */
+
+/* --- Card Breathing Effect --- */
+@keyframes cardBreathe {
+  0%, 100% {
+    background-color: rgba(0, 0, 0, 0.2); /* Corresponds to bg-black/20 */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); /* Tailwind shadow-lg base */
+  }
+  50% {
+    background-color: rgba(0, 0, 0, 0.25); /* Slightly less transparent */
+    box-shadow: 0 10px 15px -3px rgba(76, 29, 149, 0.2), 0 4px 6px -4px rgba(76, 29, 149, 0.15); /* Slightly more prominent indigo-tinted shadow */
+  }
+}
+
+.animate-card-breathe {
+  animation: cardBreathe 7s ease-in-out infinite alternate;
+}
+/* --- End Card Breathing Effect --- */
+
+/* --- Cursor-Tracking Glow Effect --- */
+.cursor-tracking-card {
+  position: relative; 
+}
+
+.cursor-tracking-card::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0; 
+  border-radius: inherit; 
+  background: radial-gradient(
+    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(139, 92, 246, var(--glow-opacity, 0)), 
+    transparent 45% 
+  );
+  transition: opacity 0.3s ease-out;
+  z-index: 0; 
+  pointer-events: none; 
+}
+
+/* --- End Cursor-Tracking Glow Effect --- */
+
+/* --- End SynSpirit Animation --- */
+
+/* 现有 Toast 通知设置 */
+.Toastify__toast-container {
+  z-index: 999999 !important;
+}
+
+/* 带延迟的序列动画，用于消息骨架屏 */
+@keyframes pulseInSequence {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-pulse-in-sequence {
+  animation: pulseInSequence 0.8s forwards;
+}
+
+/* 消息淡入动画效果 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* 消息渐入动画 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* 骨架屏交错显示动画 */
+@keyframes pulseStaggered {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  20% {
+    opacity: 0.6;
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-pulse-staggered {
+  animation: pulseStaggered 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* 骨架屏动画脉动效果延迟 */
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}
+
+/* 序列化消息加载的动画延迟类 */
+.animation-delay-50 {
+  animation-delay: 50ms;
+}
+
+.animation-delay-100 {
+  animation-delay: 100ms;
+}
+
+.animation-delay-150 {
+  animation-delay: 150ms;
+}
+
+/* 模糊变清晰效果的补充样式 */
+.blur-transition {
+  transition: filter 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Styles previously applied by JavaScript in index.html */
+
+/* 调整编辑器中图片大小 */
+.article-content figure.image {
+  max-width: 70%;
+  margin: 1em auto;
+}
+
+.article-content figure.image img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 调整视频（.media）容器大小 */
+.article-content .media {
+  width: 80%; /* Consider using max-width for better responsiveness */
+  margin: 1em auto;
+}
+
+/* 通用 iframe 样式 (包括在 .media 或 .video-embed 内的) */
+.article-content iframe,
+.article-content .media iframe,
+.article-content .video-embed iframe {
+  width: 100%;
+  min-height: 350px; /* 确保视频有最小高度 */
+  border: 0;
+}
+
+/* 
+  针对不在 .media 或 .video-embed 内的 iframe 的特定样式。
+*/
+.article-content iframe:not([class*="video-iframe"]):not([title*="player"]) {
+  display: block; 
+  width: 560px;
+  height: 315px; 
+  max-width: 80%; 
+  margin: 1em auto;
+}
+
+.article-content .video-embed {
+  position: relative;
+  padding-bottom: 56.25%; 
+  height: 0;
+  overflow: hidden;
+  max-width: 80%; 
+  margin: 1em auto;
+  background-color: #000; 
+}
+
+.article-content .video-embed iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none; 
+  min-height: unset; 
+}
+
+/* AICollapseChat 组件的光效样式 - 仅框外效果 */
+.chat-glow {
+  position: relative;
+}
+
+/* 删除整个::before伪元素，因为现在我们只使用React组件中的粒子效果 */
+
+/* 添加隐藏滚动条的全局样式 */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+  width: 0;
+  height: 0;
+}
+
+/* 针对 Virtuoso 组件的特殊处理 */
+[data-virtuoso-scroller] {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+[data-virtuoso-scroller]::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}

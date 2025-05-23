@@ -1,0 +1,36 @@
+/**
+ * 修复-ms-high-contrast警告
+ * 
+ * 这个文件用于覆盖第三方库中使用已弃用的-ms-high-contrast媒体查询的CSS
+ * 参考: https://blogs.windows.com/msedgedev/2024/04/29/deprecating-ms-high-contrast/
+ */
+
+/* 修复KaTeX库中的-ms-high-contrast-adjust属性 */
+.katex * {
+  forced-color-adjust: none !important;
+  -ms-high-contrast-adjust: none !important; /* 保留向后兼容 */
+}
+
+/* 修复rc-pagination中的-ms-high-contrast媒体查询 */
+@media (forced-colors: active) {
+  .rc-pagination-options *::backdrop,
+  .rc-pagination-options {
+    vertical-align: top;
+  }
+}
+
+/* 保留旧的媒体查询以向后兼容 */
+@media all and (-ms-high-contrast: none) {
+  .rc-pagination-options *::-ms-backdrop,
+  .rc-pagination-options {
+    vertical-align: top;
+  }
+}
+
+/* 修复highlight.js中的高对比度模式 */
+@media (forced-colors: active) {
+  .hljs-comment,
+  .hljs-quote {
+    color: CanvasText;
+  }
+} 

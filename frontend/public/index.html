@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0c2340" />
+    <meta
+      name="description"
+      content="SynSpirit"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <title>SynSpirit</title>
+    
+    <!-- 关键内联样式：确保在任何CSS或JS加载前就设置深色背景 -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg-base-color: #437a7a;
+      }
+      
+      html {
+        background-color: var(--bg-base-color) !important;
+        background-image: -webkit-linear-gradient(45deg, #437a7a, #632147) !important;
+        background-image: linear-gradient(45deg, #437a7a, #632147) !important;
+        color: white;
+        height: 100%;
+        min-height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      
+      body {
+        color: white;
+        height: 100%;
+        min-height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      
+      #root {
+        width: 100%;
+        min-height: 100%;
+        position: relative;
+      }
+      
+      /* 预加载层，确保页面加载过程中不会闪屏 */
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--bg-base-color);
+        background-image: -webkit-linear-gradient(45deg, #437a7a, #632147);
+        background-image: linear-gradient(45deg, #437a7a, #632147);
+        z-index: -1;
+        transition: opacity 0.5s ease;
+      }
+    </style>
+    
+    <!-- 防止新窗口中出现闪屏的脚本 -->
+    <script>
+      // 使用CSS变量而不是硬编码颜色
+      document.documentElement.style.backgroundColor = "var(--bg-base-color)";
+      document.documentElement.style.backgroundImage = "var(--bg-gradient)";
+      document.documentElement.style.color = "white";
+      
+      if (window.opener) {
+        document.body.style.backgroundColor = "var(--bg-base-color)";
+        document.body.style.backgroundImage = "var(--bg-gradient)";
+        document.body.style.color = "white";
+      }
+      
+      document.addEventListener("DOMContentLoaded", function() {
+        window.addEventListener("load", function() {
+          setTimeout(function() {
+            const preloadLayer = document.getElementById("preload-layer");
+            if (preloadLayer) {
+              preloadLayer.classList.add("fade-out");
+              setTimeout(function() {
+                preloadLayer.remove();
+              }, 500);
+            }
+          }, 100);
+        });
+      });
+    </script>
+    
+    <!-- 防止页面左右拖动 -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // 只针对主页面（避免影响其他可能需要左右滑动的功能）
+        const preventHorizontalScroll = function(e) {
+          // 检查是否在主页面上
+          const path = window.location.pathname;
+          if (path === '/' || path === '/home' || path.includes('/index')) {
+            const touch = e.touches[0];
+            const startX = touch.clientX;
+            const startY = touch.clientY;
+            
+            const handleTouchMove = function(e) {
+              if (!e.touches[0]) return;
+              
+              const moveX = e.touches[0].clientX;
+              const moveY = e.touches[0].clientY;
+              
+              // 计算水平和垂直移动距离
+              const deltaX = Math.abs(moveX - startX);
+              const deltaY = Math.abs(moveY - startY);
+              
+              // 如果是明显的水平滑动，则阻止
+              if (deltaX > deltaY && deltaX > 10) {
+                e.preventDefault();
+              }
+            };
+            
+            // 添加touchmove事件监听
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+            
+            // 触摸结束后移除事件监听
+            document.addEventListener('touchend', function cleanUp() {
+              document.removeEventListener('touchmove', handleTouchMove);
+              document.removeEventListener('touchend', cleanUp);
+            });
+          }
+        };
+        
+        // 监听触摸开始事件
+        document.addEventListener('touchstart', preventHorizontalScroll, { passive: true });
+      });
+    </script>
+    <!-- 为了确保图片和视频大小正确，添加一个脚本来设置样式 -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // 已处理的iframe集合，避免重复处理
+        const processedIframes = new Set();
+        
+        // 强制设置媒体样式的函数
+        function applyMediaStyles() {
+          console.log('应用媒体样式');
+          
+          // 处理图片
+          const images = document.querySelectorAll('.ck-content img, .article-content img');
+          images.forEach(img => {
+            if (!img.hasAttribute('data-styled')) {
+              img.style.maxWidth = '80%';
+              img.style.margin = '0.5em auto';
+              img.style.display = 'block';
+              img.setAttribute('data-styled', 'true');
+            }
+          });
+
+          // 处理媒体元素
+          const mediaElements = document.querySelectorAll('.ck-content .media, .article-content .media, .ck-content figure.media, .article-content figure.media');
+          mediaElements.forEach(media => {
+            if (!media.hasAttribute('data-styled')) {
+              media.style.maxWidth = '80%';
+              media.style.width = '80%';
+              media.style.margin = '1em auto';
+              media.style.padding = '0.1em 0'; 
+              media.style.display = 'block';
+              media.style.textAlign = 'center';
+              media.style.visibility = 'visible';
+              media.style.opacity = '1';
+              media.style.minHeight = '400px';
+              media.style.zIndex = '1';
+              media.setAttribute('data-styled', 'true');
+            }
+          });
+
+          // 处理视频容器
+          const videoContainers = document.querySelectorAll('.ck-content [data-oembed-url], .article-content [data-oembed-url], .ck-content .video-embed, .article-content .video-embed, .ck-content .video-container, .article-content .video-container');
+          videoContainers.forEach(container => {
+            if (!container.hasAttribute('data-styled')) {
+              container.style.maxWidth = '80%';
+              container.style.width = '80%';
+              container.style.margin = '1em auto';
+              container.style.padding = '0.1em 0';
+              container.style.position = 'relative';
+              container.style.display = 'block';
+              container.style.textAlign = 'center';
+              container.style.visibility = 'visible';
+              container.style.opacity = '1';
+              container.style.minHeight = '400px';
+              container.style.zIndex = '1';
+              container.setAttribute('data-styled', 'true');
+            }
+          });
+
+          // 确保iframe正确显示
+          const iframes = document.querySelectorAll('.ck-content iframe, .article-content iframe');
+          iframes.forEach(iframe => {
+            // 检查是否已处理过此iframe
+            if (processedIframes.has(iframe) || iframe.hasAttribute('data-styled')) {
+              return; // 跳过已处理的iframe
+            }
+            
+            iframe.style.visibility = 'visible';
+            iframe.style.opacity = '1';
+            iframe.style.display = 'block';
+            iframe.style.minHeight = '400px';
+            iframe.style.border = '0';
+            iframe.style.zIndex = '2';
+            
+            // 移除iframe的宽高限制
+            iframe.removeAttribute('width');
+            iframe.removeAttribute('height');
+            
+            // 检查是否已被包装
+            const parent = iframe.parentNode;
+            if (!parent.classList.contains('media-wrapper') && 
+                !parent.classList.contains('video-container') && 
+                !iframe.hasAttribute('data-wrapped')) {
+              
+              // 创建包装器
+              const wrapper = document.createElement('div');
+              wrapper.className = 'media-wrapper';
+              wrapper.style.position = 'relative';
+              wrapper.style.paddingBottom = '56.25%'; // 16:9比例
+              wrapper.style.height = '0';
+              wrapper.style.overflow = 'hidden';
+              wrapper.style.margin = '1em auto';
+              wrapper.style.maxWidth = '80%';
+              wrapper.style.display = 'block';
+              wrapper.style.visibility = 'visible';
+              wrapper.style.opacity = '1';
+              wrapper.style.minHeight = '400px';
+              wrapper.style.zIndex = '1';
+              
+              // 替换iframe并标记
+              parent.insertBefore(wrapper, iframe);
+              wrapper.appendChild(iframe);
+              iframe.setAttribute('data-wrapped', 'true');
+              
+              // 设置iframe样式
+              iframe.style.position = 'absolute';
+              iframe.style.top = '0';
+              iframe.style.left = '0';
+              iframe.style.width = '100%';
+              iframe.style.height = '100%';
+              iframe.style.border = '0';
+              iframe.style.minHeight = '400px';
+              iframe.style.zIndex = '2';
+            }
+            
+            // 标记此iframe已处理
+            iframe.setAttribute('data-styled', 'true');
+            processedIframes.add(iframe);
+          });
+        }
+        
+        // 页面加载后执行一次
+        applyMediaStyles();
+        
+        // 初始执行几次后停止，确保内容加载后能够应用样式
+        let counter = 0;
+        const maxTries = 5;
+        const initialInterval = setInterval(function() {
+          applyMediaStyles();
+          counter++;
+          if (counter >= maxTries) {
+            clearInterval(initialInterval);
+            console.log('初始样式应用完成');
+          }
+        }, 2000);
+        
+        // 监听DOM变化，当有新元素添加时再次应用样式
+        const observer = new MutationObserver(function(mutations) {
+          let shouldApply = false;
+          
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+              for (let i = 0; i < mutation.addedNodes.length; i++) {
+                const node = mutation.addedNodes[i];
+                if (node.nodeType === 1) { // 元素节点
+                  if (node.classList && 
+                      (node.classList.contains('ck-content') || 
+                       node.classList.contains('media') || 
+                       node.classList.contains('video-container') ||
+                       node.tagName === 'IFRAME')) {
+                    shouldApply = true;
+                    break;
+                  }
+                  
+                  // 检查子元素
+                  const mediaElements = node.querySelectorAll('.media, .video-container, iframe, img');
+                  if (mediaElements.length > 0) {
+                    shouldApply = true;
+                    break;
+                  }
+                }
+              }
+            }
+          });
+          
+          if (shouldApply) {
+            // console.log('检测到DOM变化，应用媒体样式');
+            setTimeout(applyMediaStyles, 500);
+          }
+        });
+        
+        // 开始观察整个文档
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <div id="modal-root"></div>
+  </body>
+</html> 

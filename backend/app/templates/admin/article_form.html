@@ -1,0 +1,189 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}{{ 'Edit' if article_id else 'Add' }} Article{% endblock %}
+
+{% block head_extra %}
+<!-- Include CKEditor 5 scripts -->
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{{ 'Edit' if article_id else 'Add' }} Article</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('admin.edit_article', article_id=article_id) if article_id else url_for('admin.add_article') }}" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="title" class="form-label">Title *</label>
+            <input type="text" class="form-control" id="title" name="title" value="{{ form.get('title', '') }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="content" class="form-label">Content *</label>
+            <textarea class="form-control" id="content" name="content" rows="15" style="resize: vertical; min-height: 200px;">{{ form.get('content', '') }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="summary" class="form-label">Summary</label>
+            <textarea class="form-control" id="summary" name="summary" rows="3" style="resize: vertical; min-height: 80px;">{{ form.get('summary', '') }}</textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="category" class="form-label">Category</label>
+                <input type="text" class="form-control" id="category" name="category" value="{{ form.get('category', '') }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="tags" class="form-label">Tags (comma-separated)</label>
+                <input type="text" class="form-control" id="tags" name="tags" value="{{ form.get('tags', '') }}">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="author" class="form-label">Author</label>
+                <input type="text" class="form-control" id="author" name="author" value="{{ form.get('author', '') }}">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="cover_image" class="form-label">Cover Image</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="cover_image" name="cover_image" value="{{ form.get('cover_image', '') }}" placeholder="输入图片URL或上传本地图片">
+                    <button class="btn btn-outline-secondary" type="button" id="toggleUpload">上传</button>
+                </div>
+                <div id="fileUploadContainer" class="mt-2" style="display: none;">
+                    <input type="file" class="form-control" id="cover_image_file" name="cover_image_file" accept="image/*">
+                </div>
+                <small class="form-text text-muted">可以输入图片URL或上传本地图片</small>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="slug" class="form-label">Slug (URL-friendly identifier)</label>
+            <input type="text" class="form-control" id="slug" name="slug" value="{{ form.get('slug', '') }}" placeholder="Leave blank to auto-generate (recommended)">
+             <small class="form-text text-muted">e.g., my-awesome-article</small>
+        </div>
+        <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="is_published" name="is_published" {% if form.get('is_published', True) %}checked{% endif %}>
+            <label class="form-check-label" for="is_published">Publish this article</label>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Article</button>
+        <a href="{{ url_for('admin.manage_articles') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<script>
+    ClassicEditor
+        .create( document.querySelector( '#content' ), {
+            // CKEditor configuration options
+            toolbar: { 
+                items: [ 'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', '|', 'outdent', 'indent', '|', 'blockQuote', 'insertTable', 'mediaEmbed', 'undo', 'redo' ]
+            },
+            language: 'en',
+            table: {
+                contentToolbar: [ 'tableColumn', 'tableRow', 'mergeTableCells' ]
+            },
+            mediaEmbed: {
+                // 配置支持的媒体提供商
+                providers: [
+                    {
+                        // B站嵌入支持
+                        name: 'bilibili',
+                        // B站视频URL匹配正则
+                        url: [
+                            /^https:\/\/www\.bilibili\.com\/video\/([a-zA-Z0-9]+)\/?.*$/,
+                            /^https:\/\/b23\.tv\/([a-zA-Z0-9]+)\/?.*$/
+                        ],
+                        // 生成嵌入HTML
+                        html: match => {
+                            const videoId = match[1];
+                            const url = `//player.bilibili.com/player.html?bvid=${videoId}&page=1&high_quality=1&danmaku=0`;
+                            
+                            return (
+                                '<div class="embed-responsive embed-responsive-16by9">' +
+                                    `<iframe class="embed-responsive-item" src="${url}" ` +
+                                    'style="width: 100%; height: 400px;" ' +
+                                    'frameborder="0" allowfullscreen="true" scrolling="no"></iframe>' +
+                                '</div>'
+                            );
+                        }
+                    },
+                    {
+                        // YouTube嵌入支持
+                        name: 'youtube',
+                        // YouTube视频URL匹配规则
+                        url: [
+                            /^https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)(?:&.*)?$/,
+                            /^https?:\/\/(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]+)(?:\?.*)?$/
+                        ],
+                        // 生成YouTube嵌入HTML
+                        html: match => {
+                            const videoId = match[1];
+                            const url = `https://www.youtube.com/embed/${videoId}`;
+                            
+                            return (
+                                '<div class="embed-responsive embed-responsive-16by9">' +
+                                    `<iframe class="embed-responsive-item" src="${url}" ` +
+                                    'style="width: 100%; height: 400px;" ' +
+                                    'frameborder="0" allowfullscreen="true"></iframe>' +
+                                '</div>'
+                            );
+                        }
+                    }
+                ],
+                // 增加预览区域的宽度
+                previewsInData: true
+            },
+            licenseKey: '', // Optional: Add your license key if you have one
+            // 添加调整大小功能
+            ui: {
+                height: '350px'
+            }
+        } )
+        .then(editor => {
+            // 添加调整大小功能
+            const editorElement = editor.ui.view.element;
+            editorElement.style.resize = 'vertical';
+            editorElement.style.minHeight = '350px';
+            editorElement.style.maxHeight = '800px';
+            editorElement.style.overflow = 'auto';
+            
+            // 保存按钮触发表单提交
+            document.querySelector('.btn-primary').addEventListener('click', () => {
+                // 确保编辑器内容已经同步到textarea
+                editor.updateSourceElement();
+            });
+        })
+        .catch( error => {
+            console.error( error );
+        } );
+
+    // 添加图片上传功能的交互逻辑
+    document.getElementById('toggleUpload').addEventListener('click', function() {
+        const fileContainer = document.getElementById('fileUploadContainer');
+        if (fileContainer.style.display === 'none') {
+            fileContainer.style.display = 'block';
+            this.textContent = '使用URL';
+        } else {
+            fileContainer.style.display = 'none';
+            this.textContent = '上传';
+        }
+    });
+
+    // 监听文件上传，显示预览
+    document.getElementById('cover_image_file').addEventListener('change', function(e) {
+        if (e.target.files && e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('cover_image').value = ''; // 清空URL输入
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    });
+</script>
+
+{% endblock %} 

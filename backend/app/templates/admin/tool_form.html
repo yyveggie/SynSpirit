@@ -1,0 +1,300 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}{{ '编辑' if tool_id else '添加' }}工具{% endblock %}
+
+{% block head_extra %}
+<!-- 包含CKEditor 5 脚本 -->
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+<style>
+  .form-group label .required {
+    color: red;
+    margin-left: 2px;
+  }
+  /* 微调标签和输入框对齐 */
+  .form-group label {
+    margin-bottom: 0.3rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h4 class="mb-4">{{ '编辑' if tool_id else '添加' }}工具</h4>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('admin.edit_tool', tool_id=tool_id) if tool_id else url_for('admin.add_tool') }}" enctype="multipart/form-data">
+        
+        {# 基本信息行 #}
+        <div class="row mb-3 form-group">
+            <div class="col-md-6">
+                <label for="name" class="form-label">工具名称<span class="required">*</span></label>
+                <input type="text" class="form-control form-control-sm" id="name" name="name" value="{{ form.get('name', '') }}" required>
+            </div>
+            <div class="col-md-6">
+                <label for="category_id" class="form-label">工具类别<span class="required">*</span></label>
+                <select class="form-select form-select-sm" id="category_id" name="category_id" required>
+                    <option value="" {% if not form.category_id %}selected{% endif %} disabled>选择类别</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if form.category_id == cat.id or (tool and tool.category_id == cat.id) %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        {# 描述和内容 #}
+        <div class="mb-3 form-group">
+            <label for="description" class="form-label">简短描述<span class="required">*</span></label>
+            <textarea class="form-control form-control-sm" id="description" name="description" rows="2" required>{{ form.get('description', '') }}</textarea>
+        </div>
+        
+        <div class="mb-3 form-group">
+            <label for="content" class="form-label">详细内容<span class="required">*</span></label>
+            <textarea class="form-control" id="content" name="content" rows="10">{{ form.get('content', '') }}</textarea>
+             {# CKEditor 会替换此 textarea #}
+        </div>
+        
+        {# 链接和标签行 #}
+        <div class="row mb-3 form-group">
+            <div class="col-md-6">
+                <label for="source_url" class="form-label">工具官网链接<span class="required">*</span></label>
+                <input type="url" class="form-control form-control-sm" id="source_url" name="source_url" value="{{ form.get('source_url', '') }}" required>
+            </div>
+            <div class="col-md-6">
+                <label for="tags" class="form-label">标签 (逗号分隔)<span class="required">*</span></label>
+                <input type="text" class="form-control form-control-sm" id="tags" name="tags" value="{{ form.get('tags', '') }}" required>
+            </div>
+        </div>
+        
+        {# 功能和场景行 #}
+        <div class="row mb-3 form-group">
+            <div class="col-md-6">
+                <label for="features" class="form-label">主要功能 (每行一项)<span class="required">*</span></label>
+                <textarea class="form-control form-control-sm" id="features" name="features" rows="4" required>{{ form.get('features', '') }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label for="use_cases" class="form-label">使用场景 (每行一项)<span class="required">*</span></label>
+                <textarea class="form-control form-control-sm" id="use_cases" name="use_cases" rows="4" required>{{ form.get('use_cases', '') }}</textarea>
+            </div>
+        </div>
+
+        {# 新增: 安装流程 #}
+        <div class="mb-3 form-group">
+            <label for="installation_steps" class="form-label">安装流程 (选填)</label>
+            <textarea class="form-control form-control-sm" id="installation_steps" name="installation_steps" rows="4">{{ form.get('installation_steps', '') }}</textarea>
+        </div>
+        
+        {# 优缺点行 #}
+        <div class="row mb-3 form-group">
+            <div class="col-md-6">
+                <label for="pros" class="form-label">优点 (每行一项)</label>
+                <textarea class="form-control form-control-sm" id="pros" name="pros" rows="4">{{ form.get('pros', '') }}</textarea>
+            </div>
+            <div class="col-md-6">
+                <label for="cons" class="form-label">缺点 (每行一项)</label>
+                <textarea class="form-control form-control-sm" id="cons" name="cons" rows="4">{{ form.get('cons', '') }}</textarea>
+            </div>
+        </div>
+        
+        {# 截图和 Slug 行 #}
+        <div class="row mb-3 form-group align-items-start"> {# 使用 align-items-start 避免截图预览撑高行 #}
+            <div class="col-md-6">
+                <label class="form-label">截图</label>
+                <div class="input-group input-group-sm mb-1"> {# URL 输入和切换按钮 #}
+                    <input type="text" class="form-control form-control-sm" id="screenshot_url" name="screenshot_url" value="{{ form.get('screenshot_url', '') }}" placeholder="输入图片URL或上传本地图片">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" id="toggleUpload">上传</button>
+                </div>
+                <div id="fileUploadContainer" class="mt-2" style="display: none;"> {# 文件上传 #}
+                    <input type="file" class="form-control form-control-sm" id="screenshot_file" name="screenshot_file" accept="image/*">
+                </div>
+                <small class="form-text text-muted d-block mb-2">可输入URL或上传文件。上传优先。</small>
+                {% if form.get('screenshot_url_preview') %}
+                <div class="mt-1"> {# 预览图 #}
+                    <img src="{{ form.get('screenshot_url_preview') }}" alt="截图预览" class="img-thumbnail" style="max-height: 100px;">
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label for="slug" class="form-label">Slug (URL友好标识符)<span class="required">*</span></label>
+                <input type="text" class="form-control form-control-sm" id="slug" name="slug" value="{{ form.get('slug', '') }}" placeholder="留空自动生成 (推荐)">
+                <small class="form-text text-muted">例如：my-awesome-tool</small>
+            </div>
+        </div>
+        
+        {# 免费、价格、发布行 #}
+        <div class="row mb-3 form-group align-items-center"> 
+            <div class="col-md-3">
+                 <div class="form-check"> {# 免费工具 Checkbox #}
+                    <input type="checkbox" class="form-check-input" id="is_free" name="is_free" value="true" {% if form.get('is_free', True) %}checked{% endif %}>
+                    <label class="form-check-label" for="is_free">免费工具</label>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <label for="pricing_info" class="form-label visually-hidden">价格信息</label> {# visually-hidden 因为布局已清晰 #}
+                <input type="text" class="form-control form-control-sm" id="pricing_info" name="pricing_info" value="{{ form.get('pricing_info', '') }}" placeholder="若不免费，填写价格信息">
+            </div>
+             <div class="col-md-4">
+                 <div class="form-check"> {# 发布 Checkbox #}
+                    <input type="checkbox" class="form-check-input" id="is_published" name="is_published" value="true" {% if form.get('is_published', False) %}checked{% endif %}>
+                    <label class="form-check-label" for="is_published">发布 (网站可见)</label>
+                </div>
+            </div>
+        </div>
+        
+        {# 按钮组 #}
+        <div class="mt-4 pt-3 border-top"> 
+            <button type="submit" class="btn btn-primary btn-sm">保存工具</button>
+            <a href="{{ url_for('admin.manage_tools') }}" class="btn btn-secondary btn-sm">取消</a>
+        </div>
+    </form>
+</div>
+
+{# JavaScript 部分基本保持不变 #}
+<script>
+    let ckEditorInstance;
+    ClassicEditor
+        .create( document.querySelector( '#content' ), {
+            toolbar: { 
+                items: [ 
+                    'heading', '|', 
+                    'bold', 'italic', 'link', '|', 
+                    'bulletedList', 'numberedList', 'outdent', 'indent', '|', 
+                    'blockQuote', 'insertTable', 'mediaEmbed', '|', 
+                    'undo', 'redo' 
+                ]
+            },
+            language: 'zh-cn',
+            table: {
+                contentToolbar: [ 'tableColumn', 'tableRow', 'mergeTableCells' ]
+            },
+            mediaEmbed: {
+                 providers: [
+                    {
+                        name: 'youtube',
+                        url: [
+                            /^https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)(?:&.*)?$/,
+                            /^https?:\/\/(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]+)(?:\?.*)?$/
+                        ],
+                        html: match => {
+                            const videoId = match[1];
+                            const url = `https://www.youtube.com/embed/${videoId}`;
+                            return (
+                                '<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">' +
+                                    `<iframe src="${url}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" ` +
+                                    'frameborder="0" allowfullscreen="true"></iframe>' +
+                                '</div>'
+                            );
+                        }
+                    },
+                    {
+                        name: 'bilibili',
+                         url: [
+                            /^https?:\/\/www\.bilibili\.com\/video\/([a-zA-Z0-9_]+).*?(?:\?p=(\d+))?$/,
+                            /^https?:\/\/player\.bilibili\.com\/player\.html\?aid=(\d+)&bvid=([a-zA-Z0-9_]+)&cid=(\d+).*?$/
+                        ],
+                        html: match => {
+                             let bvid = '';
+                            let cid = '';
+                            let page = '1';
+                            if (match[1] && match[1].startsWith('BV')) {
+                                // 匹配 www.bilibili.com/video/BV... 格式
+                                bvid = match[1];
+                                page = match[2] || '1';
+                            } else if (match[4] && match[5]) {
+                                // 匹配 player.bilibili.com/player.html 格式
+                                bvid = match[4];
+                                cid = match[5];
+                                // 尝试从 url 中获取 page (通常 player url 不直接带 p 参数)
+                                // const urlParams = new URLSearchParams(match[0].split('?')[1]);
+                                // page = urlParams.get('p') || '1';
+                            }
+                            // 注意: B站的外链iframe可能需要更复杂的逻辑来获取cid (如果只有bvid)
+                            // 这里简化处理，优先使用bvid
+                            const url = `//player.bilibili.com/player.html?bvid=${bvid}&page=${page}&high_quality=1&danmaku=0`;
+                            return (
+                                '<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">' +
+                                    `<iframe src="${url}" scrolling="no" border="0" frameborder="no" framespacing="0" ` +
+                                    'allowfullscreen="true" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe>' +
+                                '</div>'
+                            );
+                        }
+                    }
+                 ],
+                 previewsInData: true
+            },
+            licenseKey: '',
+            // 移除 UI 高度设置，让其自适应
+            // ui: {
+            //     height: '350px'
+            // }
+        } )
+        .then(editor => {
+            ckEditorInstance = editor; // 保存编辑器实例
+            const editorElement = editor.ui.view.element;
+            // 可以移除固定高度样式，让其更灵活
+            // editorElement.style.resize = 'vertical';
+            // editorElement.style.minHeight = '350px';
+            // editorElement.style.maxHeight = '800px';
+            // editorElement.style.overflow = 'auto';
+
+             // 表单提交前更新 textarea (重要)
+             const form = editorElement.closest('form');
+             if (form) {
+                 form.addEventListener('submit', () => {
+                     editor.updateSourceElement();
+                 });
+             }
+        })
+        .catch( error => {
+            console.error( 'CKEditor 错误:', error );
+        } );
+
+    // 截图上传/URL切换逻辑
+    document.getElementById('toggleUpload').addEventListener('click', function() {
+        const fileContainer = document.getElementById('fileUploadContainer');
+        const urlInput = document.getElementById('screenshot_url');
+        const fileInput = document.getElementById('screenshot_file');
+        
+        if (fileContainer.style.display === 'none') {
+            fileContainer.style.display = 'block';
+            urlInput.value = ''; // 清空URL输入
+            urlInput.disabled = true;
+            fileInput.disabled = false;
+            this.textContent = '使用URL';
+        } else {
+            fileContainer.style.display = 'none';
+            fileInput.value = ''; // 清空文件选择
+            urlInput.disabled = false;
+            fileInput.disabled = true;
+            this.textContent = '上传';
+        }
+    });
+
+    // 初始化时禁用文件输入 (如果URL有值)
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlInput = document.getElementById('screenshot_url');
+        const fileInput = document.getElementById('screenshot_file');
+        const fileContainer = document.getElementById('fileUploadContainer');
+        if (urlInput.value) {
+            fileContainer.style.display = 'none';
+            fileInput.disabled = true;
+            document.getElementById('toggleUpload').textContent = '上传';
+        } else {
+             fileContainer.style.display = 'block';
+             urlInput.disabled = true;
+             document.getElementById('toggleUpload').textContent = '使用URL';
+        }
+    });
+</script>
+{% endblock %} 

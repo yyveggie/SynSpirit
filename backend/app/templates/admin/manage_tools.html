@@ -1,0 +1,59 @@
+{% extends 'admin/base.html' %}
+
+{% block title %}管理AI工具{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>管理AI工具</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <a href="{{ url_for('admin.add_tool') }}" class="btn btn-primary mb-3">添加新工具</a>
+    
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>名称</th>
+                <th>类别</th>
+                <th>评分</th>
+                <th>人气</th>
+                <th>免费</th>
+                <th>创建时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tool in tools %}
+            <tr>
+                <td>{{ tool.name }}</td>
+                <td>{{ tool.category.name if tool.category else '未分类' }}</td>
+                <td>{{ "%.1f" | format(tool.rating) }}</td>
+                <td>{{ tool.popularity }}</td>
+                <td>{{ '是' if tool.is_free else '否' }}</td>
+                <td>{{ tool.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <a href="{{ url_for('admin.edit_tool', tool_id=tool.id) }}" class="btn btn-sm btn-warning">编辑</a>
+                    <form action="{{ url_for('admin.delete_tool', tool_id=tool.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('确定要删除这个工具吗？');">
+                        <button type="submit" class="btn btn-sm btn-danger">删除</button>
+                    </form>
+                    <a href="/tool/{{ tool.slug }}" class="btn btn-sm btn-info" target="_blank">查看</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7">没有找到工具。</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 

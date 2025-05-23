@@ -1,0 +1,836 @@
+/* 文章卡片相关样式 */
+
+/* 文章内容样式 */
+.article-content {
+  line-height: 1.6;
+  font-size: 1rem;
+  color: #e2e8f0;
+  will-change: opacity, height; /* 优化动画性能 */
+  transform: translateZ(0); /* 开启GPU加速 */
+  contain: content; /* 添加内容隔离，减少重绘范围 */
+  position: relative; /* 创建层叠上下文 */
+  z-index: 1;
+}
+
+.article-content p {
+  margin-bottom: 1rem;
+  transform: translate3d(0,0,0); /* 促使文本内容创建独立图层 */
+}
+
+.article-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
+  margin: 1rem 0;
+  opacity: 0; /* 初始隐藏 */
+  animation: fade-in 0.5s ease-in-out forwards; /* 淡入动画 */
+  animation-delay: 0.1s; /* 轻微延迟，避免所有图片同时加载 */
+  will-change: opacity, transform; /* 明确告知浏览器要变化的属性 */
+  transform: translateZ(0); /* 图片创建独立图层 */
+  contain: paint; /* 包含绘制操作 */
+  content-visibility: auto; /* 使用新特性延迟不可见内容渲染 */
+}
+
+/* 增强性能优化：滚动时禁用图片动画效果 */
+.scrolling .article-content img {
+  animation: none !important;
+  opacity: 1 !important;
+  transition: none !important;
+  animation-play-state: paused !important; /* 暂停动画 */
+  transform: translate3d(0,0,0) !important; /* 强制在滚动时保持独立图层 */
+}
+
+/* 响应快速滚动，进一步优化图片和内容渲染 */
+.rapid-scroll .article-content img {
+  content-visibility: auto; /* 自动管理可见性 */
+  contain-intrinsic-size: auto 300px; /* 提供尺寸提示 */
+}
+
+/* 图片淡入动画 */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.article-content h1, 
+.article-content h2, 
+.article-content h3, 
+.article-content h4, 
+.article-content h5, 
+.article-content h6 {
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  color: #f8fafc;
+}
+
+.article-content a {
+  color: #60a5fa;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s ease;
+}
+
+.article-content a:hover {
+  color: #93c5fd;
+}
+
+.article-content blockquote {
+  border-left: 4px solid #4b5563;
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+.article-content pre {
+  background-color: rgba(15, 23, 42, 0.7);
+  border-radius: 0.375rem;
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.article-content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background-color: rgba(15, 23, 42, 0.5);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.article-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.article-content ul, 
+.article-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.article-content li {
+  margin-bottom: 0.5rem;
+}
+
+/* 交互按钮样式 */
+.action-button {
+  display: flex;
+  align-items: center;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  transition: all 0.2s ease-in-out;
+  background-color: transparent;
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0); /* 创建独立图层 */
+  will-change: background-color, transform;
+  transform-style: preserve-3d; /* 优化3D变换 */
+}
+
+.action-button::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-color: currentColor;
+  border-radius: inherit;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transform: scale(0);
+  transition: transform 0.3s ease, opacity 0.2s ease;
+}
+
+.action-button:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.action-button:hover::after {
+  opacity: 0.05;
+  transform: scale(1);
+}
+
+.action-button:active::after {
+  opacity: 0.1;
+}
+
+.action-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5);
+}
+
+/* 增强滚动时按钮性能优化 */
+.scrolling .action-button::after {
+  transition: none !important;
+  animation: none !important;
+  animation-play-state: paused !important;
+}
+
+.scrolling .action-button:hover::after {
+  transform: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important; /* 滚动时禁用所有悬停效果 */
+}
+
+/* 评论区样式优化 */
+.comments-glass-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  border: none !important;
+  backdrop-filter: blur(1px) !important;
+  -webkit-backdrop-filter: blur(1px) !important;
+  box-shadow: none !important;
+}
+
+.comments-glass-panel > div:nth-child(2) {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  min-height: 200px !important;
+  position: relative !important;
+}
+
+/* 确保评论区背景完全透明 */
+.comments-glass-panel:before {
+  display: none !important;
+}
+
+/* 确保评论文本清晰可见 */
+.comments-glass-panel .text-gray-300 {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* 移除评论之间的分隔线 */
+.comments-glass-panel .border-b,
+.comments-glass-panel .border-gray-700,
+.comments-glass-panel .border-l {
+  border-color: transparent !important;
+}
+
+/* 评论容器相对于文章卡片定位 */
+.comment-container {
+  position: absolute !important;
+  top: 0 !important;
+  left: 100% !important; 
+  right: auto !important;
+  bottom: auto !important;
+  margin-left: 20px !important;
+  height: 100% !important;
+  width: 450px !important;
+  z-index: 50 !important;
+  transform: none !important;
+  transform-origin: left center;
+  animation: fade-in-comment 0.3s ease-in-out;
+  animation-delay: 0.1s;
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+
+/* 强制取消任何可能导致位置偏移的样式 */
+.article-card-wrapper.showing-comments .comment-container {
+  position: absolute !important;
+  top: 0 !important;
+  left: 100% !important;
+  bottom: auto !important;
+  transform: none !important;
+}
+
+/* 文章卡片容器样式 */
+.article-card-wrapper {
+  position: relative !important;
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
+/* 带评论的文章卡片不需要右侧边距 */
+.article-card-wrapper.expanded-with-comments {
+  margin-right: 0 !important;
+}
+
+/* 正在显示评论的文章卡片特殊样式 */
+.article-card-wrapper.showing-comments {
+  z-index: 30 !important;
+}
+
+/* 自定义滚动条样式 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 8px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* 确保AI用户（ID=-1）的用户名显示为紫色 */
+.text-purple-400 {
+  color: rgb(192, 132, 252) !important;
+}
+
+.hover\:text-purple-300:hover {
+  color: rgb(216, 180, 254) !important;
+}
+
+/* 添加背景模糊效果增强可读性 */
+.connection-hint:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* 连接线样式优化 */
+.connection-line {
+  pointer-events: none; /* 不拦截鼠标事件 */
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+  transform: translateZ(0); /* 创建独立图层 */
+  will-change: opacity; /* 仅指定会变化的属性 */
+  contain: strict; /* 严格内容隔离 */
+}
+
+.connection-line path {
+  /* 发光效果 */
+  filter: drop-shadow(0 0 2px rgba(74, 222, 128, 0.4));
+}
+
+/* 当评论面板关闭时，淡出连接线 */
+.connection-line.fading {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+/* ===============================================
+ * 动态栏右移功能实现
+ * ===============================================
+ * 核心实现原理：
+ * 1. 使用CSS类标记状态：当评论区打开时，将body添加.comments-open类
+ * 2. 使用CSS选择器匹配动态栏元素：#dynamic-feed和.dynamic-feed-container
+ * 3. 通过transform属性实现平滑移动，transition实现过渡动画
+ * 4. 使用媒体查询适配不同屏幕尺寸
+ * 5. JavaScript事件系统管理多评论状态
+ *
+ * 主要交互流程：
+ * - 评论打开时：body添加.comments-open类，触发动态栏右移
+ * - 评论关闭时：移除.comments-open类，动态栏平滑回到原位
+ * - 同时监听document.body.dataset.openCommentsCount确保准确追踪状态
+ * =============================================== */
+
+/* 动态栏移动效果基础样式 - 设置过渡时间和缓动曲线 */
+.dynamic-feed-container,
+#dynamic-feed {
+  transition: transform 0.8s cubic-bezier(0.34, 0.82, 0.6, 1), opacity 0.6s ease-out !important;
+  will-change: transform, opacity;
+  transform: translateZ(0); /* 开启GPU加速 */
+}
+
+/* 性能优化：滚动时暂停动态栏的过渡动画 */
+.scrolling .dynamic-feed-container,
+.scrolling #dynamic-feed {
+  transition: none !important;
+}
+
+/* 评论区打开时动态栏样式 - 右移并降低不透明度 */
+body.comments-open .dynamic-feed-container,
+body.comments-open #dynamic-feed {
+  transform: translateX(500px) !important; /* 右移500px，为更宽的评论区留出空间 */
+  opacity: 0.7 !important; /* 降低不透明度，突出评论区 */
+  will-change: transform, opacity; /* 明确指定变化属性 */
+  backface-visibility: hidden; /* 优化性能 */
+  transform-style: preserve-3d; /* 优化3D变换 */
+}
+
+/* 评论区关闭时动态栏样式 - 平滑回到原位 */
+body:not(.comments-open) .dynamic-feed-container,
+body:not(.comments-open) #dynamic-feed {
+  transform: translateX(0) !important; /* 恢复原位 */
+  opacity: 1 !important; /* 恢复完全不透明 */
+}
+
+/* 响应式设计 - 平板和桌面设备 */
+@media (min-width: 768px) {
+  body.comments-open .dynamic-feed-container,
+  body.comments-open #dynamic-feed {
+    transform: translateX(500px) !important; /* 大屏幕保持500px右移 */
+  }
+}
+
+/* 响应式设计 - 移动设备 */
+@media (max-width: 767px) {
+  body.comments-open .dynamic-feed-container,
+  body.comments-open #dynamic-feed {
+    transform: translateX(100%) !important; /* 小屏幕使用百分比确保完全移出 */
+    opacity: 0.5 !important; /* 更低的不透明度 */
+  }
+  
+  /* 移动设备上评论面板样式调整 */
+  .comments-glass-panel {
+    width: 90vw !important; /* 评论面板占据更多屏幕空间 */
+    left: auto !important;
+    right: 5px !important;
+  }
+}
+
+/* ===============================================
+ * 评论区动画效果
+ * ===============================================
+ * 核心实现原理：
+ * 1. 使用transform和opacity属性实现过渡动画
+ * 2. 通过CSS动画(keyframes)定义进入和退出效果
+ * 3. 结合JavaScript控制添加和移除动画类
+ * =============================================== */
+
+/* 评论区滑入动画 */
+.comments-slide-in {
+  transform: translateX(100%);
+  opacity: 0;
+  animation: slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 评论区滑出动画 */
+.comments-slide-out {
+  transform: translateX(0);
+  opacity: 1;
+  animation: slide-out 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 性能优化：滚动时暂停所有评论区动画 */
+.scrolling .comments-slide-in,
+.scrolling .comments-slide-out {
+  animation: none !important;
+}
+
+@keyframes slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slide-out {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .article-content {
+    font-size: 0.9rem;
+  }
+  
+  .action-button {
+    padding: 0.2rem 0.4rem;
+  }
+}
+
+/* 性能优化：为所有文章卡片添加GPU加速和内容隔离 */
+.card-interactive {
+  will-change: transform, box-shadow;
+  transform: translateZ(0); /* 开启GPU加速 */
+  backface-visibility: hidden; /* 优化3D变换 */
+  contain: content; /* 内容隔离，减少重排影响 */
+  isolation: isolate; /* 创建独立的层叠上下文 */
+  z-index: 1; /* 确保正确的层叠顺序 */
+}
+
+/* 增强滚动时的卡片性能 */
+.scrolling .card-interactive:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  transition: none !important;
+  pointer-events: none !important; /* 滚动时禁用交互，提高性能 */
+}
+
+.lazy-content-placeholder {
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.05) 25%, 
+    rgba(255, 255, 255, 0.1) 50%, 
+    rgba(255, 255, 255, 0.05) 75%);
+  background-size: 200% 100%;
+  animation: loading-pulse 1.5s ease-in-out infinite;
+  border-radius: 0.25rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  display: inline-block;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-left-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+}
+
+.content-transition {
+  transition: height 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+}
+
+.content-closing {
+  opacity: 0;
+  animation: content-closing 0.3s ease-out forwards;
+}
+
+@keyframes content-closing {
+  from { max-height: 500px; opacity: 1; }
+  to { max-height: 0; opacity: 0; }
+}
+
+/* 图片懒加载相关 */
+img.lazy-load,
+.lazy-load img {
+  opacity: 0;
+  transition: opacity 0.5s ease, filter 0.5s ease;
+  transform: translateZ(0);
+  will-change: opacity;
+  contain: layout style paint;
+  content-visibility: auto;
+}
+
+img.lazy-loaded,
+.lazy-loaded img {
+  opacity: 1;
+}
+
+/* 性能优化：滚动时禁用图片懒加载过渡效果 */
+.scrolling img.lazy-load,
+.scrolling .lazy-load img,
+.scrolling img.lazy-loaded,
+.scrolling .lazy-loaded img {
+  transition: none !important;
+}
+
+.expanded-with-comments {
+  margin-right: 450px;
+  transition: margin-right 0.3s ease-out;
+}
+
+/* 性能优化：滚动时禁用评论区容器过渡效果 */
+.scrolling .expanded-with-comments {
+  transition: none !important;
+}
+
+.comments-glass-panel .p-4 {
+  padding: 1.5rem !important;
+}
+
+.comments-glass-panel h3 {
+  margin-top: 0 !important;
+  margin-bottom: 1rem !important;
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.025em !important;
+}
+
+/* 自定义滚动条 - 性能优化: 使用简化版本 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.1);
+}
+
+/* 评论面板定位优化 */
+.comments-glass-panel {
+  position: fixed !important;
+}
+
+/* 优化评论区组件样式 */
+.comments-glass-panel .p-4 {
+  padding: 1.25rem;
+}
+
+.comments-glass-panel h3 {
+  font-size: 1.125rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+/* 评论区滚动条样式优化 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(17, 24, 39, 0.1);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(107, 114, 128, 0.5);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.7);
+}
+
+/* Firefox 滚动条样式 */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(107, 114, 128, 0.5) rgba(17, 24, 39, 0.1);
+}
+
+/* 评论区元素z-index层级调整，确保在合适的层级 */
+.comments-glass-panel {
+  z-index: 40 !important;
+}
+
+/* 移除原有的卡片悬停样式，因为我们现在使用JavaScript控制 */
+.card-interactive {
+  /* 保留其他基础样式但移除悬停相关属性 */
+  position: relative;
+}
+
+.card-interactive:hover {
+  /* 移除所有悬停效果，让JavaScript接管 */
+}
+
+/* 交互按钮激活状态 */
+.action-button.active {
+  font-weight: 500;
+}
+
+/* 评论区底部圆角阴影 */
+.comments-glass-panel::after {
+  display: none !important;
+}
+
+/* 改进标签样式 */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.tag-chip:hover {
+  filter: brightness(1.1);
+}
+
+/* Styles for the expanded content area */
+.article-content {
+  /* Add any specific styles for the rendered markdown/html content here */
+  /* For example, link styling */
+  a {
+    @apply text-blue-400 hover:text-blue-300 transition-colors;
+  }
+  /* Image styling within content */
+  img {
+    @apply rounded-md my-2 shadow-md;
+  }
+}
+
+/* Style for the closing animation */
+.content-closing {
+  transition: opacity 0.3s ease-out, height 0.3s ease-out;
+  opacity: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* --- 新增：视频容器样式，强制 16:9 比例 --- */
+.iframe-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+  height: 0;
+  margin-bottom: 1rem; 
+  border-radius: 8px; 
+}
+
+.iframe-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Ensure cards marked as interactive have pointer cursor */
+.card-interactive {
+  cursor: pointer;
+}
+
+/* 滚动时禁用所有过渡效果 - 增强版 */
+.scrolling .expanded-with-comments,
+.scrolling .comments-slide-in,
+.scrolling .comments-slide-out,
+.scrolling img.lazy-load,
+.scrolling .lazy-load img,
+.scrolling img.lazy-loaded,
+.scrolling .lazy-loaded img,
+.scrolling .action-button,
+.scrolling .card-interactive,
+.scrolling .dynamic-feed-container,
+.scrolling #dynamic-feed {
+  transition: none !important;
+  animation: none !important;
+  animation-play-state: paused !important;
+  animation-duration: 0.01ms !important;
+}
+
+/* 自定义滚动条样式 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 8px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* 优化滚动性能和行为 */
+.custom-scrollbar {
+  scroll-behavior: smooth !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important; /* iOS流畅滚动 */
+}
+
+/* 评论区容器 - 完全融入背景 */
+.comments-glass-panel {
+  contain: content;
+  isolation: isolate;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 评论面板内部元素样式 */
+.comments-glass-panel h3 {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+}
+
+.comments-glass-panel .border-b {
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* 确保评论滚动容器始终可滚动 */
+.comments-glass-panel > div:nth-child(2) {
+  overflow-y: auto !important;
+  max-height: calc(90vh - 100px) !important;
+}
+
+/* 修复Firefox和Safari滚动问题 */
+@supports (-moz-appearance:none) {
+  .comments-glass-panel > div:nth-child(2) {
+    scrollbar-width: thin !important;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent !important;
+  }
+}
+
+@supports (-webkit-appearance:none) {
+  .comments-glass-panel > div:nth-child(2)::-webkit-scrollbar {
+    width: 4px !important;
+  }
+  
+  .comments-glass-panel > div:nth-child(2)::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1) !important;
+  }
+}
+
+/* 使评论容器保持在视口内 */
+body.showing-comments .comment-container {
+  position: sticky !important;
+  right: 20px;
+  top: 20px;
+  height: calc(100vh - 40px) !important;
+  max-height: calc(100vh - 40px) !important;
+}
+
+/* 评论区容器 - 添加背景渐变提高可读性 */
+.comments-glass-panel:before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.01),
+    rgba(0, 0, 0, 0.1)
+  );
+  pointer-events: none;
+  z-index: -1;
+  border-radius: inherit;
+}
+
+/* 确保评论区在移动设备上正确显示 */
+@media (max-width: 1100px) {
+  .comment-container {
+    position: absolute !important;
+    top: 0 !important;
+    left: 100% !important;
+    width: 380px !important;
+    margin-left: 8px !important;
+  }
+}
+
+/* 使评论内容固定在容器内 */
+.comments-glass-panel {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+@keyframes fade-in-comment {
+  from { opacity: 0; }
+  to { opacity: 1; }
+} 

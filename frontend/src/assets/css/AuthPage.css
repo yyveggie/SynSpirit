@@ -1,0 +1,335 @@
+/* AuthPage.css - Styles for the combined Login/Register Page */
+
+/* Import a nice font (optional, or use system fonts) */
+@import url('https://fonts.googleapis.com/css?family=Montserrat:400,800');
+
+* {
+  box-sizing: border-box;
+}
+
+body.auth-active {
+  /* Apply this class to body when AuthPage is active if you want a specific page background */
+  /* background: #f6f5f7; */ /* Example light grey background */
+  /* display: flex; */
+  /* justify-content: center; */
+  /* align-items: center; */
+  /* flex-direction: column; */
+  /* font-family: 'Montserrat', sans-serif; */
+  /* height: 100vh; */
+  /* margin: -20px 0 50px; */ /* Adjust if needed */
+}
+
+.auth-page-container {
+  background: linear-gradient(32deg, #61177c, #004d65); /* Match your app's main gradient */
+  min-height: 100vh; /* Full viewport height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px; /* Add some padding around the container */
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* Styles for the main container */
+#auth-container {
+  background-color: #fff;  /* Fallback, will be mostly covered by panels */
+  border-radius: 10px;
+  box-shadow: 0 14px 28px rgba(0,0,0,0.25), 
+              0 10px 10px rgba(0,0,0,0.22);
+  position: relative;
+  overflow: hidden; /* Crucial for the sliding effect */
+  width: 768px; /* Width from the example */
+  max-width: 100%;
+  min-height: 480px; /* Height from the example */
+}
+
+/* Styles for form containers (sign-in and sign-up) */
+.form-container {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transition: all 0.4s ease-in-out; /* 加快动画 */
+}
+
+.sign-in-container {
+  left: 0;
+  width: 50%;
+  z-index: 2; /* Above sign-up initially */
+}
+
+.sign-up-container {
+  left: 0;
+  width: 50%;
+  opacity: 0;
+  z-index: 1;
+}
+
+/* Form styling */
+.form-container form {
+  background-color: #2c2c54; /* Darker panel background for contrast */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 50px;
+  height: 100%;
+  text-align: center;
+  color: #e0e0e0; /* Light text for dark panels */
+}
+
+.form-container h1 {
+  font-weight: bold;
+  margin: 0 0 15px; /* 略微减少标题下边距 */
+  font-size: 2em; /* 原始大小，供参考 */
+  /* color: #ffffff; 由具体面板的h1覆盖 */
+}
+
+/* 为登录和注册标题设置不同颜色和略小一点的字号 */
+.sign-in-container h1 {
+  color: #ffffff; /* 登录标题颜色 (白色) */
+  font-size: 1.8em; /* 减小字体 */
+}
+
+.sign-up-container h1 {
+  color: #f0f0f0; /* 注册标题颜色 (略暗的白色或根据您的主题调整) */
+  font-size: 1.8em; /* 减小字体 */
+}
+
+.form-container span {
+  font-size: 11px; /* 减小字体 */
+  margin-bottom: 8px;
+}
+
+.form-container input {
+  background-color: #3b3b6d;
+  border: none;
+  padding: 10px 12px; /* 略微减小内边距 */
+  margin: 7px 0; /* 略微减小外边距 */
+  width: 100%;
+  border-radius: 5px;
+  color: #e0e0e0;
+  outline: none;
+  font-size: 13px; /* 调整输入框字体大小 */
+}
+
+.form-container input::placeholder {
+  color: #aaa;
+  font-size: 12px; /* 调整占位符字体大小 */
+}
+
+.form-container button {
+  border-radius: 20px;
+  border: 1px solid #6A0DAD; /* 紫色 */
+  background-color: #6A0DAD; /* 紫色 */
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 12px 45px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: transform 80ms ease-in;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.form-container button:active {
+  transform: scale(0.95);
+}
+
+.form-container button:focus {
+  outline: none;
+}
+
+.form-container button.ghost {
+  background-color: transparent;
+  border-color: #FFFFFF;
+}
+
+.form-container button.guest-login-button {
+    margin-top: 15px;
+    background-color: transparent;
+    border: 1px solid #888;
+    color: #ccc;
+}
+
+.form-container button.guest-login-button:hover {
+    background-color: rgba(255,255,255,0.1);
+    border-color: #ccc;
+}
+
+.form-container a.forgot-password-link {
+  color: #ccc;
+  font-size: 11px; /* 减小字体 */
+  text-decoration: none;
+  margin: 12px 0;
+}
+.form-container a.forgot-password-link:hover {
+  text-decoration: underline;
+}
+
+.error-message {
+  color: #6A0DAD; /* 紫色，与按钮颜色统一 */
+  font-size: 12px;
+  margin-top: -5px; /* Adjust as needed */
+  margin-bottom: 10px;
+  /* width: 100%; */
+  /* text-align: left; */ /* Or center, depending on preference */
+}
+
+.success-message {
+  color: #28a745; /* 深绿色，例如 Bootstrap 的 success color */
+  font-size: 12px;
+  margin-top: -5px;
+  margin-bottom: 10px;
+  padding: 5px;
+  /* background-color: rgba(40, 167, 69, 0.1); */ /* 可选：浅绿色背景 */
+  /* border: 1px solid rgba(40, 167, 69, 0.3); */ /* 可选：浅绿色边框 */
+  border-radius: 4px;
+  text-align: center; /* 或根据您的设计调整 */
+}
+
+/* Overlay Container */
+.overlay-container {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  transition: transform 0.4s ease-in-out; /* 加快动画 */
+  z-index: 100; /* Above form containers */
+}
+
+.overlay {
+  /* background: #800000; */ /* 旧酒红色 - 纯色备选 */
+  /* background: -webkit-linear-gradient(to right, #B22222, #800000); */  /* 旧酒红色渐变 */
+  /* background: linear-gradient(to right, #B22222, #800000); */ /* 旧酒红色渐变 */
+  background: #4B0082; /* 深紫色 - 纯色备选 */
+  background: -webkit-linear-gradient(to right, #6A0DAD, #4B0082);  /* 紫色渐变 */
+  background: linear-gradient(to right, #6A0DAD, #4B0082); /* 紫色渐变 */
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: 0 0;
+  color: #FFFFFF;
+  position: relative;
+  left: -100%;
+  height: 100%;
+  width: 200%; /* Twice the width of overlay-container */
+  transform: translateX(0);
+  transition: transform 0.4s ease-in-out; /* 加快动画 */
+}
+
+.overlay-panel {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 40px;
+  text-align: center;
+  top: 0;
+  height: 100%;
+  width: 50%; /* Half of .overlay width, so it's 100% of .overlay-container */
+  transform: translateX(0);
+  transition: transform 0.4s ease-in-out; /* 加快动画 */
+}
+
+.overlay-panel h1 {
+  font-weight: bold;
+  margin: 0;
+  font-size: 2em; 
+  color: #FFFFFF; /* 改回白色 */
+  /* text-shadow:
+    -1px -1px 0 #fff,  
+     1px -1px 0 #fff,
+    -1px  1px 0 #fff,
+     1px  1px 0 #fff,
+     0px  0px 5px rgba(255,255,255,0.5); */ /* 移除描边效果 */
+}
+
+.overlay-panel p {
+  font-size: 13px; /* 减小字体 */
+  font-weight: 100;
+  line-height: 1.5;
+  letter-spacing: 0.5px;
+  margin: 15px 0 20px; /* 调整边距 */
+}
+
+.overlay-panel button {
+  border-radius: 20px;
+  border: 1px solid #FFFFFF;
+  background-color: transparent;
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 12px 45px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 20px;
+}
+
+.overlay-panel button:hover {
+  background-color: rgba(255,255,255,0.1);
+  transform: translateY(-2px);
+}
+
+.overlay-left {
+  transform: translateX(-20%); /* Initially hidden slightly to the left */
+  opacity: 1;
+  z-index: 5;
+  animation: show 0.4s; /* 加快动画 */
+}
+
+.overlay-right {
+  right: 0;
+  transform: translateX(0); /* Initially visible */
+}
+
+/* Animation movements */
+
+/* Move sign-in to the right */
+#auth-container.right-panel-active .sign-in-container {
+  transform: translateX(100%);
+}
+
+/* Move overlay to the left */
+#auth-container.right-panel-active .overlay-container {
+  transform: translateX(-100%);
+}
+
+/* Bring sign-up over */
+#auth-container.right-panel-active .sign-up-container {
+  transform: translateX(100%);
+  opacity: 1;
+  z-index: 5;
+  animation: show 0.4s;
+}
+
+/* Move overlay back to the right */
+#auth-container.right-panel-active .overlay {
+  transform: translateX(50%);
+}
+
+/* Move overlay-left into view */
+#auth-container.right-panel-active .overlay-left {
+  transform: translateX(0);
+}
+
+/* Move overlay-right out of view */
+#auth-container.right-panel-active .overlay-right {
+  transform: translateX(20%);
+}
+
+@keyframes show {
+  0%, 49.99% {
+    opacity: 0;
+    z-index: 1;
+  }
+  
+  50%, 100% {
+    opacity: 1;
+    z-index: 5;
+  }
+} 

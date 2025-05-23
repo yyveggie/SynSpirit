@@ -1,0 +1,37 @@
+{% extends 'base.html' %} {# Assuming you have a base.html for the frontend #}
+
+{% block title %}Articles{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Articles</h1>
+    <hr>
+    
+    {% if articles %}
+        {% for article in articles %}
+            <article class="mb-4">
+                <h2><a href="{{ url_for('articles.view_article', slug=article.slug) }}">{{ article.title }}</a></h2>
+                {% if article.summary %}
+                    <p class="text-muted">{{ article.summary }}</p>
+                {% endif %}
+                <small class="text-muted">By {{ article.author if article.author else 'Unknown' }} on {{ article.created_at.strftime('%Y-%m-%d') }} {% if article.category %}| Category: {{ article.category }}{% endif %}</small>
+                <br>
+                {% if article.tags %}
+                    <small class="text-muted">
+                        Tags: 
+                        {% for tag in article.tags %}
+                            <span class="badge bg-secondary">{{ tag }}</span>
+                        {% endfor %}
+                    </small>
+                {% endif %}
+            </article>
+            <hr class="my-4">
+        {% endfor %}
+    {% else %}
+        <p>No articles published yet.</p>
+    {% endif %}
+    
+    <!-- Optional: Add pagination controls if needed -->
+
+</div>
+{% endblock %} 

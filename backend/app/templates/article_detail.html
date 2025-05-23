@@ -1,0 +1,56 @@
+{% extends 'base.html' %} {# Assuming you have a base.html for the frontend #}
+
+{% block title %}{{ article.title }}{% endblock %}
+
+{% block head_extra %}
+{# Optional: Add styles for code highlighting if your articles use it #}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+<style>
+    .article-content img {
+        max-width: 100%;
+        height: auto;
+        margin-top: 1em;
+        margin-bottom: 1em;
+    }
+    .article-content pre code {
+        border-radius: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <article>
+        <header class="mb-4">
+            <h1>{{ article.title }}</h1>
+            <div class="text-muted fst-italic mb-2">
+                Posted on {{ article.created_at.strftime('%B %d, %Y') }} by {{ article.author if article.author else 'Admin' }}
+            </div>
+            {% if article.category %}
+                <a class="badge bg-secondary text-decoration-none link-light" href="#!">{{ article.category }}</a>
+            {% endif %}
+             {% if article.tags %}
+                {% for tag in article.tags %}
+                    <span class="badge bg-info text-dark text-decoration-none">{{ tag }}</span>
+                {% endfor %}
+            {% endif %}
+        </header>
+        
+        {% if article.cover_image %}
+            <figure class="mb-4">
+                <img src="{{ article.cover_image }}" class="img-fluid rounded" alt="Cover image for {{ article.title }}">
+            </figure>
+        {% endif %}
+
+        <section class="mb-5 article-content">
+            {# Use the |safe filter because the content comes from CKEditor #}
+            {{ article.content | safe }}
+        </section>
+
+    </article>
+    <hr>
+    <a href="{{ url_for('articles.list_articles') }}" class="btn btn-outline-secondary">&larr; Back to Articles</a>
+</div>
+{% endblock %} 

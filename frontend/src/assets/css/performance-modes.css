@@ -1,0 +1,127 @@
+/**
+ * 性能模式CSS
+ * 
+ * 根据检测到的性能状况，动态应用不同级别的性能优化
+ * 这些样式会自动通过滚动性能管理器激活
+ */
+
+/* 基础性能模式 - 默认模式，保持动画效果 */
+.perf-normal .lazy-load,
+.perf-normal .lazy-loaded {
+  transition: opacity 0.5s ease, filter 0.5s ease;
+}
+
+.perf-normal .action-button:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.perf-normal .action-button:hover::after {
+  opacity: 0.05;
+  transform: scale(1);
+}
+
+/* 高性能模式 - 减少动画效果，优化滚动性能 */
+.perf-high * {
+  transition-duration: 0.3s !important; /* 减少过渡时间 */
+}
+
+.perf-high .lazy-load,
+.perf-high .lazy-loaded {
+  transition: opacity 0.3s ease !important;
+}
+
+.perf-high .card-interactive:hover {
+  transform: none !important; /* 禁用卡片悬停效果 */
+}
+
+.perf-high .dynamic-feed-container,
+.perf-high #dynamic-feed {
+  transition: transform 0.4s ease-out, opacity 0.3s ease-in-out !important;
+}
+
+/* 极限性能模式 - 禁用所有影响性能的效果 */
+.perf-extreme * {
+  animation-play-state: paused !important;
+  animation-duration: 0.01ms !important;
+  transition: none !important;
+  will-change: auto !important;
+}
+
+.perf-extreme img.lazy-load,
+.perf-extreme .lazy-load img,
+.perf-extreme img.lazy-loaded,
+.perf-extreme .lazy-loaded img {
+  animation: none !important;
+  transition: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.perf-extreme .card-interactive:hover,
+.perf-extreme .card-interactive:active {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.perf-extreme .action-button:hover::after {
+  opacity: 0 !important;
+  transform: none !important;
+}
+
+/* 针对视频元素的优化 - 确保不影响视频加载 */
+.perf-high iframe,
+.perf-extreme iframe,
+.perf-high video,
+.perf-extreme video {
+  /* 不应用性能限制，以确保视频正常播放 */
+  will-change: auto;
+  transform: none;
+  animation-play-state: running !important;
+  transition: opacity 0.5s ease !important;
+}
+
+/* 不同性能模式下的内容可见性策略 */
+.perf-normal .article-content * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 200px;
+}
+
+.perf-high .article-content * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}
+
+.perf-extreme .article-content * {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+  contain: strict;
+}
+
+/* 不同性能模式下的滚动条样式 */
+.perf-high .custom-scrollbar::-webkit-scrollbar,
+.perf-extreme .custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.perf-high .custom-scrollbar::-webkit-scrollbar-thumb,
+.perf-extreme .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(107, 114, 128, 0.3);
+}
+
+.perf-extreme .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.3);
+}
+
+/* 滚动时禁用指针事件，减少事件处理开销 */
+.perf-high.scrolling *,
+.perf-extreme.scrolling * {
+  pointer-events: none !important;
+}
+
+/* 允许滚动条保持交互 */
+.perf-high.scrolling ::-webkit-scrollbar,
+.perf-extreme.scrolling ::-webkit-scrollbar,
+.perf-high.scrolling ::-webkit-scrollbar-thumb,
+.perf-extreme.scrolling ::-webkit-scrollbar-thumb {
+  pointer-events: auto !important;
+} 

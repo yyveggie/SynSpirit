@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SynSpirit</title>
+  <style>
+    /* 立即设置背景样式，确保没有白色或黑色闪烁 */
+    html, body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: #1d1d43;
+      background-image: linear-gradient(32deg, #61177c,#004d65);
+      color: white;
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      color-scheme: dark;
+    }
+    
+    .loading-container {
+      text-align: center;
+      opacity: 0;
+      animation: fadeIn 0.2s forwards;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 16px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-left-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .loading-text {
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      margin: 0;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="loading-container">
+    <div class="loading-spinner"></div>
+  </div>
+  
+  <script>
+    // 当主窗口准备就绪时，自动关闭此预加载页面
+    window.addEventListener('load', function() {
+      // 获取目标URL（如果有）
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetUrl = urlParams.get('redirect') || '/';
+      
+      // 立即跳转到目标页面，无需等待
+      window.location.href = targetUrl;
+    });
+  </script>
+</body>
+</html> 
