@@ -231,23 +231,23 @@ const NotificationPopover: React.FC<NotificationPopoverProps> = ({
   return (
     <div className="flex flex-col w-full">
       {/* 顶部过滤器和操作栏 */}
-      <div className="flex justify-between items-center py-2 px-3 border-b border-gray-700/30">
+      <div className="flex justify-between items-center py-2 px-3 border-b border-gray-200/50">
         <div className="flex space-x-2">
           <button
-            className={`text-xs py-1 px-2 rounded ${
+            className={`text-xs py-1 px-2 rounded text-black ${
               !unreadFilter 
-                ? 'bg-gray-700/50 text-white' 
-                : 'text-gray-300 hover:bg-gray-700/30'
+                ? 'bg-gray-200/70 font-medium' 
+                : 'hover:bg-gray-100/70'
             }`}
             onClick={() => handleFilterChange(false)}
           >
             全部
           </button>
           <button
-            className={`text-xs py-1 px-2 rounded ${
+            className={`text-xs py-1 px-2 rounded text-black ${
               unreadFilter 
-                ? 'bg-gray-700/50 text-white' 
-                : 'text-gray-300 hover:bg-gray-700/30'
+                ? 'bg-gray-200/70 font-medium' 
+                : 'hover:bg-gray-100/70'
             }`}
             onClick={() => handleFilterChange(true)}
           >
@@ -255,7 +255,7 @@ const NotificationPopover: React.FC<NotificationPopoverProps> = ({
           </button>
         </div>
         <button
-          className="text-xs text-gray-300 hover:text-white py-1 px-2 rounded flex items-center space-x-1 hover:bg-gray-700/30"
+          className="text-xs text-black py-1 px-2 rounded flex items-center space-x-1 hover:bg-gray-100/70"
           onClick={handleMarkAllAsRead}
           disabled={allNotifications.length === 0 || allNotifications.every(n => n.is_read)}
         >
@@ -265,16 +265,16 @@ const NotificationPopover: React.FC<NotificationPopoverProps> = ({
       </div>
 
       {/* 通知列表 */}
-      <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+      <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
         {loading ? (
           <div className="py-8 flex justify-center items-center">
-            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-gray-300"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-gray-600"></div>
           </div>
         ) : error ? (
           <div className="py-8 px-4 text-center">
-            <p className="text-sm text-gray-400 mb-2">{error}</p>
+            <p className="text-sm text-gray-600 mb-2">{error}</p>
             <button
-              className="text-xs bg-gray-700/50 text-white py-1 px-3 rounded-full flex items-center mx-auto space-x-1 hover:bg-gray-700"
+              className="text-xs bg-gray-200 text-gray-700 py-1 px-3 rounded-full flex items-center mx-auto space-x-1 hover:bg-gray-300"
               onClick={handleRetry}
             >
               <RefreshCcw className="h-3 w-3" />
@@ -282,16 +282,16 @@ const NotificationPopover: React.FC<NotificationPopoverProps> = ({
             </button>
           </div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="py-12 px-4 text-center text-gray-400">
+          <div className="py-12 px-4 text-center text-gray-600">
             <p className="text-sm">{unreadFilter ? '没有未读通知' : '暂无通知'}</p>
           </div>
         ) : (
-          <ul className="divide-y divide-gray-700/30">
+          <ul className="divide-y divide-gray-200">
             {filteredNotifications.map((notification) => (
               <li 
                 key={notification.id}
-                className={`p-3 hover:bg-white/10 cursor-pointer transition-colors duration-200 flex items-start space-x-3 ${
-                  !notification.is_read ? 'bg-gray-700/10' : ''
+                className={`p-3 hover:bg-gray-100 cursor-pointer transition-colors duration-200 flex items-start space-x-3 ${
+                  !notification.is_read ? 'bg-blue-50' : ''
                 }`}
                 onClick={() => handleNotificationClick(notification)}
               >
@@ -305,20 +305,20 @@ const NotificationPopover: React.FC<NotificationPopoverProps> = ({
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between mb-1">
-                    <span className="text-sm font-medium truncate">
+                    <span className="text-sm font-medium text-black truncate">
                       {notification.actor?.nickname || '系统通知'}
                     </span>
-                    <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                    <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
                       {formatTime(notification.created_at)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-300 line-clamp-2">
+                  <p className="text-xs text-gray-700 line-clamp-2">
                     {notification.content}
                   </p>
                   {!notification.is_read && (
                     <div className="mt-1 flex justify-end">
-                      <span className="inline-flex items-center bg-green-500/20 text-green-400 rounded-full px-2 py-0.5 text-[10px]">
-                        <span className="h-1.5 w-1.5 bg-green-400 rounded-full mr-1"></span>
+                      <span className="inline-flex items-center bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-[10px]">
+                        <span className="h-1.5 w-1.5 bg-green-500 rounded-full mr-1"></span>
                         新消息
                       </span>
                     </div>
@@ -332,19 +332,19 @@ const NotificationPopover: React.FC<NotificationPopoverProps> = ({
 
       {/* 分页控制 */}
       {!loading && !error && totalPages > 1 && (
-        <div className="flex justify-between items-center px-3 py-2 border-t border-gray-700/30">
+        <div className="flex justify-between items-center px-3 py-2 border-t border-gray-200">
           <button
-            className="text-xs text-gray-300 hover:text-white disabled:text-gray-500 disabled:cursor-not-allowed"
+            className="text-xs text-gray-600 hover:text-black disabled:text-gray-400 disabled:cursor-not-allowed"
             onClick={() => setPage(prev => Math.max(1, prev - 1))}
             disabled={page === 1}
           >
             上一页
           </button>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-600">
             {page} / {totalPages}
           </span>
           <button
-            className="text-xs text-gray-300 hover:text-white disabled:text-gray-500 disabled:cursor-not-allowed"
+            className="text-xs text-gray-600 hover:text-black disabled:text-gray-400 disabled:cursor-not-allowed"
             onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
             disabled={page === totalPages}
           >

@@ -177,8 +177,9 @@ const ArticleContent = React.memo(({ content }: { content: string }) => {
   // 渲染内容
   return (
     <div 
-      className="article-content"
+      className="article-content text-black"
       dangerouslySetInnerHTML={{ __html: processedContent }}
+      style={{ color: 'black' }}
     />
   );
 });
@@ -902,7 +903,7 @@ const ArticleCard = React.memo(({
   // 监听收藏mutation成功
   useEffect(() => {
     // 移除此处的 toast 调用，因为 usePostQueries/useArticleQueries 中的 onSuccess 会处理
-}, [articleCollectMutation.isSuccess, postCollectMutation.isSuccess, targetType, isCollected]); // isCollected 仍然作为依赖
+}, [articleCollectMutation.isSuccess, postCollectMutation.isSuccess, targetType, isCollected]);
 
   // 分享功能实现 - 显示分享选项而非模态框
   const handleShare = useCallback((e: React.MouseEvent) => {
@@ -995,11 +996,16 @@ const ArticleCard = React.memo(({
     if (
         (e.target as HTMLElement).closest('.series-toggle-button') || 
         (e.target as HTMLElement).closest('.media-carousel-container') ||
-        (e.target as HTMLElement).closest('.action-button') // 阻止点击交互按钮时的导航
+        (e.target as HTMLElement).closest('.action-button') ||
+        (e.target as HTMLElement).closest('a') || // 阻止点击链接时的导航
+        (e.target as HTMLElement).closest('button') // 阻止点击按钮时的导航
     ) {
+        e.stopPropagation();
         return;
     }
-    // navigate(articleLink); // 移除: 取消卡片点击时的当前页导航
+    
+    // 在新窗口打开文章详情页
+    window.open(articleLink, '_blank');
   };
 
   const handleSeriesClick = (e: React.MouseEvent) => {
@@ -1104,11 +1110,13 @@ const ArticleCard = React.memo(({
   
   const isSeries = seriesArticles && seriesArticles.length > 0;
 
-  // Restore original classes, add card-interactive
+  // 修改卡片样式：添加更深的浅灰色悬停背景效果，并添加圆角边框
   const cardWrapperClasses = `
-    bg-gray-800/8 backdrop-blur-xl rounded-lg overflow-hidden
+    bg-transparent overflow-hidden
     transition-all duration-300 cursor-pointer
-    group relative z-10 card-interactive border border-white/5
+    group relative z-10 card-interactive
+    border-b border-black pb-4
+    hover:bg-gray-200/40 hover:rounded-lg
   `;
 
   // Tooltip State
@@ -1182,10 +1190,7 @@ const ArticleCard = React.memo(({
       {/* Restore original Stacking effect for series articles */}
       {isSeries && (
         <>
-          {/* Offset background card 1 */}
-          <div className="absolute inset-0 bg-gray-800/8 backdrop-blur-md rounded-lg shadow-md transform translate-x-1 translate-y-1 -z-10 border border-white/5"></div>
-          {/* Offset background card 2 */}
-          <div className="absolute inset-0 bg-gray-800/5 backdrop-blur-md rounded-lg shadow-sm transform translate-x-2 translate-y-2 -z-20 border border-white/3"></div>
+          {/* 删除背景卡片 */}
         </>
       )}
       
@@ -1194,19 +1199,20 @@ const ArticleCard = React.memo(({
         onClick={handleCardClick} 
         className={cardWrapperClasses}
         style={{
-          boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)',
+          boxShadow: 'none',
           transform: 'scale(1)',
-          transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease-out'
+          transition: 'transform 0.3s ease-out'
         }}
         onMouseEnter={(e) => {
+          // 移除悬停效果，保持简洁
           const el = e.currentTarget;
-          el.style.transform = 'translateY(-8px) scale(1.02)';
-          el.style.boxShadow = '0 15px 25px rgba(0, 0, 0, 0.3)';
+          el.style.transform = 'scale(1)';
+          el.style.boxShadow = 'none';
         }}
         onMouseLeave={(e) => {
           const el = e.currentTarget;
           el.style.transform = 'scale(1)';
-          el.style.boxShadow = '0px 4px 8px rgba(0, 0, 0, 0.3)';
+          el.style.boxShadow = 'none';
         }}
       >
         <div className="p-4 transition-all duration-300">
@@ -1216,7 +1222,7 @@ const ArticleCard = React.memo(({
             <div className="flex items-center gap-x-2 mb-1">
                 <CustomLink 
                 to={articleLink}
-                  className="text-lg md:text-xl font-semibold text-gray-100 hover:text-blue-400 transition-colors duration-200 leading-tight"
+                  className="text-lg md:text-xl font-semibold text-black hover:text-blue-700 transition-colors duration-200 leading-tight"
                 forceNewTab={true}
                 onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
@@ -1243,16 +1249,48 @@ const ArticleCard = React.memo(({
                 )}
               </div>
               
-            {/* 第二部分：标签、系列按钮和日期，始终在标题下方 */}
-            {/* 这个 div 包含所有应该在标题下方的元信息 */}
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400">
-              {/* 普通标签 */}
+            {/* 第二部分：修改为用户昵称 | 时间 | 标签 | 系列文章的一列布局 */}
+            <div className="flex items-center text-xs text-gray-600 gap-x-2">
+              {/* 用户昵称 */}
+              {author && author.nickname && (
+                <span 
+                  className="relative inline-block"
+                  onMouseEnter={handleAuthorMouseEnter}
+                  onMouseLeave={handleAuthorMouseLeave}
+                >
+                  <Link 
+                    to={`/profile/${author.username || author.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-blue-600 hover:text-blue-800 font-semibold"
+                  >
+                    {author.nickname}
+                  </Link>
+                  <AuthorTooltip
+                    nickname={author.nickname}
+                    bio={author.bio}
+                    tags={Array.isArray(author.tags) ? author.tags : (author.tags ? [author.tags] : null)}
+                    isVisible={isAuthorTooltipVisible}
+                    avatar={author.avatar}
+                  />
+                </span>
+              )}
+              
+              {/* 分隔符 */}
+              {author && author.nickname && <span className="text-gray-400">|</span>}
+              
+              {/* 日期 */}
+              <span className="whitespace-nowrap">{formatDate(date)}</span>
+              
+              {/* 分隔符 */}
+              {tags.length > 0 && <span className="text-gray-400">|</span>}
+              
+              {/* 标签 */}
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {tags.map((tag, index) => (
                     <span 
                       key={index}
-                      className="inline-block bg-blue-900/40 text-blue-200 px-2 py-0.5 rounded text-xs font-medium"
+                      className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-medium"
                     >
                       {tag}
                     </span>
@@ -1260,11 +1298,14 @@ const ArticleCard = React.memo(({
                 </div>
               )}
               
+              {/* 分隔符 */}
+              {isSeries && <span className="text-gray-400">|</span>}
+              
               {/* 系列文章按钮 */}
               {isSeries && (
                  <button 
                     onClick={handleSeriesClick}
-                    className="series-toggle-button flex-shrink-0 px-2 py-0.5 bg-purple-900/60 hover:bg-purple-900/80 text-purple-200 text-xs rounded-md flex items-center transition-colors"
+                    className="series-toggle-button flex-shrink-0 px-2 py-0.5 bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs rounded-md flex items-center transition-colors"
                   >
                     {series_name ? `系列文章：${series_name}` : '系列文章'}
                     <svg 
@@ -1275,9 +1316,6 @@ const ArticleCard = React.memo(({
                     </svg>
                   </button>
               )}
-            
-              {/* 日期 - 移到这个统一的元信息行 */}
-              <span className="whitespace-nowrap">{formatDate(date)}</span>
             </div>
           </div>
           
@@ -1310,30 +1348,7 @@ const ArticleCard = React.memo(({
               <motion.div key="preview" {...contentAnimationProps}>
                 {/* 文本预览 with Author Nickname */}
                 {content && (
-                  <p className="text-gray-300 text-sm line-clamp-6 mb-3">
-                    {author && author.nickname && (
-                      <span 
-                        className="relative inline-block mr-1"
-                        onMouseEnter={handleAuthorMouseEnter}
-                        onMouseLeave={handleAuthorMouseLeave}
-                      >
-                        <Link 
-                          to={`/profile/${author.username || author.id}`} // Prefer username if available
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-blue-400 hover:text-blue-300 font-semibold"
-                        >
-                          {author.nickname}：
-                        </Link>
-                        {/* 确保工具提示始终显示 */}
-                        <AuthorTooltip
-                          nickname={author.nickname}
-                          bio={author.bio}
-                          tags={Array.isArray(author.tags) ? author.tags : (author.tags ? [author.tags] : null)}
-                          isVisible={isAuthorTooltipVisible}
-                          avatar={author.avatar}
-                        />
-                      </span>
-                    )}
+                  <p className="text-gray-900 text-sm line-clamp-6 mb-3">
                     {getContentPreview(content)} 
                   </p>
                 )}
@@ -1349,11 +1364,13 @@ const ArticleCard = React.memo(({
                 {content && (
                   <button 
                     onClick={handleExpandToggle}
-                    className="text-blue-400 hover:text-blue-300 text-sm font-medium mb-3 flex items-center action-button"
+                    className="text-blue-400 hover:text-blue-300 text-sm font-medium mb-3 -ml-2 flex items-center action-button"
+                    aria-label={isExpanded ? "收起内容" : "查看全文"}
+                    style={{ marginLeft: '-0.5rem' }}
                   >
-                    查看全文
+                    {isExpanded ? '收起' : '查看全文'}
                     <svg 
-                      className="ml-1 w-4 h-4 transition-transform duration-300"
+                      className={`ml-1 w-4 h-4 transition-transform duration-300 ${isExpanded ? 'transform rotate-180' : ''}`} 
                       fill="none" 
                       viewBox="0 0 24 24" 
                       stroke="currentColor"
@@ -1367,8 +1384,8 @@ const ArticleCard = React.memo(({
               // 展开模式 - 完整内容
               <motion.div key="fullContent" {...contentAnimationProps}>
                 {/* 使用Suspense和React.lazy延迟加载文章内容 */}
-                <Suspense fallback={<div className="text-gray-400 text-center py-2">加载内容中...</div>}>
-                  <div className="text-gray-300 text-sm mb-3">
+                <Suspense fallback={<div className="text-gray-600 text-center py-2">加载内容中...</div>}>
+                  <div className="text-black text-sm mb-3">
                     <LazyArticleContent content={content} />
                   </div>
                 </Suspense>
@@ -1393,7 +1410,7 @@ const ArticleCard = React.memo(({
           </AnimatePresence>
             
           {/* 交互按钮 - 改造为可点击按钮 */}
-          <div className={`flex items-center space-x-4 text-sm text-gray-400 pt-2 border-t border-gray-700/30`}> 
+          <div className={`flex items-center space-x-4 text-sm text-gray-500 pt-2`}> 
               {/* 点赞按钮 - 改为心形图标 */}
               {likesCount !== undefined && (
                 <button 
@@ -1458,8 +1475,8 @@ const ArticleCard = React.memo(({
                     title={`${comment_count} 条评论`}
                     onClick={handleCommentClick}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                       <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                      </svg>
                      <span>{comment_count}</span>
                   </button>
@@ -1469,14 +1486,14 @@ const ArticleCard = React.memo(({
                     <AnimatePresence mode="wait">
                       <motion.div
                         key={currentPreviewCommentIndex} // 确保评论切换时动画重新触发
-                        className="ml-2 text-xs text-gray-300 pointer-events-none whitespace-nowrap overflow-hidden max-w-xs" // 增加最大宽度以显示更多内容
+                        className="ml-2 text-xs text-gray-700 pointer-events-none whitespace-nowrap overflow-hidden max-w-xs" // 增加最大宽度以显示更多内容
                         style={{ textOverflow: 'ellipsis' }} // 确保省略号生效
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 0.85, x: 0 }} // 调整透明度使其更明显
                         exit={{ opacity: 0, x: 10 }}
                         transition={{ duration: 0.6, ease: "easeInOut" }}
                       >
-                        <span className="font-medium text-gray-200">{previewComments[currentPreviewCommentIndex]?.user?.nickname || '匿名'}:</span>
+                        <span className="font-medium text-black">{previewComments[currentPreviewCommentIndex]?.user?.nickname || '匿名'}:</span>
                         <span className="ml-1">{previewComments[currentPreviewCommentIndex]?.content}</span>
                       </motion.div>
                     </AnimatePresence>
@@ -1507,9 +1524,9 @@ const ArticleCard = React.memo(({
               key={article.id}
               to={article.slug ? `/article/${article.slug}` : '#'} 
               className={`
-                block bg-gray-800/10 backdrop-blur-xl rounded-lg p-2 shadow-sm 
-                hover:bg-gray-700/20 transition-colors duration-200
-                transform opacity-100 card-interactive border border-white/5
+                block bg-white rounded-lg p-2 shadow-sm 
+                hover:bg-gray-50 transition-colors duration-200
+                transform opacity-100 card-interactive border border-gray-100
               `}
               style={{ 
                  transitionDelay: `${index * 50}ms`,
@@ -1517,10 +1534,10 @@ const ArticleCard = React.memo(({
               }}
             >
               <div className="flex justify-between items-center">
-                <h3 className={`text-sm truncate ${article.is_current ? 'text-blue-400 font-semibold' : 'text-white'}`}>
+                <h3 className={`text-sm truncate ${article.is_current ? 'text-blue-400 font-semibold' : 'text-black'}`}>
                    {article.series_order ? `${article.series_order}. ` : ''}{article.title}
                 </h3>
-                {article.date && <span className="text-xs text-gray-400 flex-shrink-0 ml-2">{article.date}</span>}
+                {article.date && <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{article.date}</span>}
               </div>
             </CustomLink>
           ))}
@@ -1548,7 +1565,7 @@ const ArticleCard = React.memo(({
               width: "1px", 
               height: "20px",
               transform: "translateY(-50%)",
-              background: "rgba(74, 222, 128, 0.05)",
+              background: "rgba(74, 222, 128, 0.2)",
               borderRadius: "0 1px 1px 0"
             }}
           />

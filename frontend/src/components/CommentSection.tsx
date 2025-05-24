@@ -757,95 +757,147 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     const repliesCount = hasReplies ? countTotalComments(comment.replies) : 0;
 
     return (
-      <div key={comment.id} className={`comment-item ${depth > 0 ? 'ml-4 md:ml-6' : ''} py-3 relative`}>
+      <div key={comment.id} className={`comment-item py-3 relative`} 
+           style={{ 
+             paddingLeft: depth > 0 ? `${depth * 8}px` : '0',
+             marginLeft: depth > 0 ? '12px' : '0' 
+           }}>
+         {/* 统一嵌套标识线 - 根据深度动态调整 */}
          {depth > 0 && (
-            <div className="absolute left-0 top-0 bottom-0 w-px bg-white/50 -ml-3 md:-ml-4"
-              style={{ top: '1.5rem', bottom: '0.5rem' }}></div>
+            <div className="absolute" style={{
+              left: "0px",
+              top: "0",
+              bottom: hasReplies && !shouldHideReplies ? '50%' : '100%', 
+              width: "1px",
+              background: "rgba(0, 0, 0, 0.2)"
+            }}></div>
          )}
-         <div className="flex items-start space-x-2 mb-1 user-info">
-            {/* 修复：确保折叠/展开按钮对所有有回复的评论都显示，不仅限于嵌套回复 */}
-            {hasReplies && (
-                <button
-                    onClick={(e) => toggleReplies(comment.id, e)}
-                    className="text-gray-400 hover:text-white py-0 px-0.5 focus:outline-none font-mono text-xs flex items-center justify-center flex-shrink-0 mr-1"
-                    style={{ 
-                      marginLeft: depth > 0 ? '-2rem' : '0', 
-                      width: '2rem', 
-                      textAlign: 'center',
-                      minWidth: '2rem'
-                    }}
-                    aria-label={shouldHideReplies ? '展开回复' : '收起回复'}>
-                    {shouldHideReplies ? `[+${repliesCount}]` : '[-]'}
-                </button>
-            )}
-            <UserAvatar userId={comment.user?.id ?? undefined} 
-                        username={displayName} 
-                        avatar={comment.user?.avatar} 
-                        size="sm" 
-                        showName={false}
-            />
-            <div className="flex-grow flex items-baseline justify-between ml-2">
-                <span className={`font-medium text-sm ${comment.is_ai_generated ? 'text-purple-400' : (comment.user ? 'text-gray-100' : 'text-gray-400')}`}>
+         {/* 水平连接线 */}
+         {depth > 0 && (
+            <div className="absolute" style={{
+              left: "0px",
+              top: "30px", 
+              width: "8px",
+              height: "1px",
+              background: "rgba(0, 0, 0, 0.2)"
+            }}></div>
+         )}
+         <div className="flex items-start mb-1 user-info">
+            <div className="flex-shrink-0" style={{minWidth: '24px'}}>
+              <UserAvatar userId={comment.user?.id ?? undefined} 
+                          username={displayName} 
+                          avatar={comment.user?.avatar} 
+                          size="sm" 
+                          showName={false}
+                          className=""
+              />
+            </div>
+            <div className="flex-grow ml-3">
+              <div className="flex items-baseline justify-between">
+                <span className={`font-medium text-sm ${comment.is_ai_generated ? 'text-purple-600 dark:text-purple-400' : 'text-blue-600 dark:text-blue-400'}`}>
                   {displayName}
                 </span>
-            <span className="text-xs text-gray-400 pt-1 ml-auto">
+                <span className="text-xs text-gray-500 pt-1 ml-auto">
                   {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: zhCN })}
                 </span>
-         </div>
-         </div>
-         <div className={`${depth > 0 ? 'pl-8' : 'pl-0'}`}> 
-            <p className={`text-sm mt-1 whitespace-pre-wrap break-words ${isDeleted ? 'text-blue-400 italic' : 'text-gray-300'}`}>
-              {comment.content}
-            </p>
-            <div className="mt-2 flex items-center space-x-4">
+              </div>
+              
+              <p style={{color: 'black'}} className="text-sm mt-1 whitespace-pre-wrap break-words">
+                {comment.is_ai_generated ? (
+                  <span className="text-purple-600 dark:text-purple-400">{comment.content}</span>
+                ) : isDeleted ? (
+                  <span className="text-blue-400 italic">{comment.content}</span>
+                ) : (
+                  <span style={{color: 'black'}}>{comment.content}</span>
+                )}
+              </p>
+            
+              <div className="mt-2 flex items-center">
                 {!isDeleted && (
-                    <>
-                        <button onClick={() => handleReplyClick(comment.id, displayName)}
-                  className={`text-xs ${isReplying ? 'text-blue-400' : 'text-gray-400 hover:text-blue-400'} flex items-center`}
-                            disabled={!authToken} title={!authToken ? "请先登录" : (isReplying ? "取消回复" : "回复")}>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                </button>
-                         <button onClick={() => authToken ? (isLikedByCurrentUser ? handleUnlike(comment.id) : handleLike(comment.id)) : toast.warn('请先登录后点赞')}
-                            className={`text-xs flex items-center transition-colors duration-200 ${isLikedByCurrentUser ? 'text-pink-500 hover:text-pink-400' : 'text-gray-400 hover:text-pink-400'}`}
-                            disabled={!authToken || toggleLikeMutation.isPending} title={!authToken ? "请先登录" : (isLikedByCurrentUser ? "取消点赞" : "点赞")}>
-                            {isLikedByCurrentUser ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
-                    ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                  <div className="flex items-center">
+                    {/* 折叠按钮移到最左侧 */}
+                    {hasReplies && (
+                      <button
+                        onClick={(e) => toggleReplies(comment.id, e)}
+                        className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 py-0 px-0.5 focus:outline-none font-mono text-xs flex items-center justify-center mr-3 w-[36px] text-center"
+                        aria-label={shouldHideReplies ? '展开回复' : '收起回复'}>
+                        {shouldHideReplies ? `[+${repliesCount}]` : '[-]'}
+                      </button>
                     )}
-                            {/* 修改：为点赞数添加固定宽度布局 */}
-                            <span className="tabular-nums" style={{ display: 'inline-block', minWidth: '1rem', textAlign: 'left', marginLeft: '0.125rem' }}>
-                              {currentLikeCount > 0 ? currentLikeCount : ''}
-                            </span>
-                 </button>
-                {canDelete && (
-                          <button onClick={() => handleDeleteCommentOrReply(comment.id)}
-                              className="text-xs text-gray-400 hover:text-red-400 flex items-center" title="删除评论">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                  </button>
-                        )}
-                    </>
+                    
+                    {/* 回复按钮 */}
+                    <button onClick={() => handleReplyClick(comment.id, displayName)}
+                      className={`text-xs ${isReplying ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'} flex items-center mr-4`}
+                      disabled={!authToken} title={!authToken ? "请先登录" : (isReplying ? "取消回复" : "回复")}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                    
+                    {/* 点赞按钮 */}
+                    <button onClick={() => authToken ? (isLikedByCurrentUser ? handleUnlike(comment.id) : handleLike(comment.id)) : toast.warn('请先登录后点赞')}
+                      className={`text-xs flex items-center transition-colors duration-200 ${isLikedByCurrentUser ? 'text-pink-500 hover:text-pink-400' : 'text-gray-500 hover:text-pink-400'} mr-4`}
+                      disabled={!authToken || toggleLikeMutation.isPending} title={!authToken ? "请先登录" : (isLikedByCurrentUser ? "取消点赞" : "点赞")}>
+                      {isLikedByCurrentUser ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                      )}
+                      {currentLikeCount > 0 && <span className="text-xs ml-1">{currentLikeCount}</span>}
+                    </button>
+                    
+                    {/* 删除按钮 */}
+                    {canDelete && (
+                      <button onClick={() => handleDeleteCommentOrReply(comment.id)}
+                        className="text-xs text-gray-500 hover:text-red-500 flex items-center" title="删除评论">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
+              
+              {/* 回复输入框 */}
               {replyToCommentId === comment.id && (
                 <div className="relative w-full mt-3">
-                   <textarea ref={replyInputRef} value={replyContent} onChange={handleReplyChange}
+                  <textarea ref={replyInputRef} value={replyContent} onChange={handleReplyChange}
                     placeholder={`回复 ${replyTargetUser}...`} rows={2}
-                    className="w-full p-3 pr-10 pb-3 bg-gray-800/90 rounded-md text-sm text-white placeholder-gray-400 resize-none h-16 shadow-inner border-0 outline-none"
+                    className="w-full p-3 pr-10 pb-3 bg-gray-800/90 rounded-md text-sm text-white placeholder-gray-400 resize-none h-16 shadow-inner border-0 outline-none focus:ring-1 focus:ring-blue-500/50"
                     autoFocus />
                   <div className="absolute bottom-2 right-2 flex items-center space-x-2">
-                     <button onClick={() => handleSubmitReply(comment.id)}
-                       disabled={submittingReply || !replyContent.trim()} title="回复"
-                       className={`text-white hover:text-blue-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors duration-200 p-1 rounded hover:bg-gray-700/50 ${submittingReply ? 'animate-pulse' : ''}`}>
-                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transform rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l4-4m-4 4l4 4" /></svg>
-                     </button>
-                   </div>
-                     </div>
-                   )}
+                    <button onClick={() => handleSubmitReply(comment.id)}
+                      disabled={submittingReply || !replyContent.trim()} title="回复"
+                      className={`text-white hover:text-blue-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors duration-200 p-1 rounded hover:bg-gray-700/50 ${submittingReply ? 'animate-pulse' : ''}`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transform rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l4-4m-4 4l4 4" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-         {hasReplies && !shouldHideReplies && (
-             <div className="replies-container relative mt-2 space-y-3 ml-8">
-             {comment.replies.map(reply => renderComment(reply, depth + 1))}
+              )}
+            </div>
+         </div>
+         
+         {/* 回复容器 - 移除ml-6减少DOM嵌套的影响 */}
+         {hasReplies && (
+           <div className="replies-container relative mt-2 space-y-2 overflow-hidden transition-all duration-300 ease-in-out" 
+               style={{ 
+                 maxHeight: shouldHideReplies ? '0' : '10000px',
+                 opacity: shouldHideReplies ? 0 : 1,
+                 marginTop: shouldHideReplies ? '0' : '0.5rem',
+                 transform: shouldHideReplies ? 'translateY(-10px)' : 'translateY(0)',
+               }}>
+             {!shouldHideReplies && (
+               <>
+                 {comment.replies.map(reply => renderComment(reply, depth + 1))}
+               </>
+             )}
            </div>
          )}
       </div>
@@ -854,13 +906,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({
 
   // --- 主渲染 ---
   return (
-    <div className="mt-10 pt-6 border-t border-gray-700/50" ref={commentsContainerRef}>
+    <div className="mt-10 pt-6 border-t border-gray-300/50" ref={commentsContainerRef}>
        {/* --- 修改：评论区头部，包含评论总数、排序和操作按钮 --- */}
       <div className="flex justify-between items-center mb-6">
          {/* --- 修改：将评论图标和计数添加到按钮组 --- */}
          <div className="flex items-center space-x-3">
             {/* 评论图标和计数 */}
-            <div className="flex items-center text-gray-400 text-sm">
+            <div className="flex items-center text-gray-600 text-sm">
                 {/* @ts-ignore */}
                 <MessageSquare size={16} className="mr-1" />
                 <span className="tabular-nums">({countTotalComments(comments)})</span>
@@ -914,20 +966,20 @@ const CommentSection: React.FC<CommentSectionProps> = ({
          <div className="flex items-center space-x-2">
                 <button
               onClick={(e) => handleSortChange(e, 'latest')}
-              className={`px-4 py-1.5 rounded-full border transition-colors text-xs font-medium ${ 
+              className={`px-4 py-1.5 rounded-full transition-colors text-xs font-medium ${ 
                 sortBy === 'latest' 
-                  ? 'bg-gray-700/50 border-gray-500 text-gray-300'
-                  : 'bg-transparent border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-300'
+                  ? 'bg-gray-200/80 dark:bg-gray-700/80 text-gray-900 dark:text-gray-100'
+                  : 'bg-transparent text-gray-500 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
                 >
                   最新
                 </button>
                 <button
               onClick={(e) => handleSortChange(e, 'popular')}
-              className={`px-4 py-1.5 rounded-full border transition-colors text-xs font-medium ${ 
+              className={`px-4 py-1.5 rounded-full transition-colors text-xs font-medium ${ 
                 sortBy === 'popular' 
-                  ? 'bg-gray-700/50 border-gray-500 text-gray-300'
-                  : 'bg-transparent border-gray-600 text-gray-500 hover:border-gray-400 hover:text-gray-300'
+                  ? 'bg-gray-200/80 dark:bg-gray-700/80 text-gray-900 dark:text-gray-100'
+                  : 'bg-transparent text-gray-500 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
                 >
                   热门
@@ -941,15 +993,15 @@ const CommentSection: React.FC<CommentSectionProps> = ({
       {token && currentUser && (
         <div className="mb-8 flex items-center space-x-2">
           <div className="relative flex-grow">
-            <textarea
+            <textarea 
               ref={commentInputRef}
-              value={newComment}
+              value={newComment} 
               onChange={handleCommentChange}
               onFocus={handleCommentFocus}
               onBlur={handleCommentBlur}
-              className={`w-full px-4 py-3 pr-12 bg-gray-800/80 backdrop-blur-sm rounded-xl
-                focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white text-sm 
-                resize-none placeholder-gray-400 shadow-inner
+              className={`w-full px-4 py-3 pr-12 bg-gray-100/80 backdrop-blur-sm rounded-xl
+                focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-black text-sm 
+                resize-none placeholder-gray-500 shadow-inner
                 transition-all duration-300 ease-in-out
                 ${isCommentFocused || newComment.trim() ? 'h-24' : 'h-12'}`}
               rows={isCommentFocused || newComment.trim() ? 3 : 1}
@@ -967,7 +1019,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
               <button
                 onClick={handleSubmitComment}
                 disabled={submittingComment || !newComment.trim() || submitCommentMutation.isPending}
-                  className={`p-2 text-blue-400 hover:text-blue-300 rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 ${submittingComment ? 'animate-pulse' : ''}`}
+                  className={`p-2 text-blue-600 hover:text-blue-500 rounded-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-blue-500 ${submittingComment ? 'animate-pulse' : ''}`}
                   title="提交评论 (Cmd/Ctrl+Enter)"
               >
                    {submitCommentMutation.isPending ? (
@@ -975,11 +1027,11 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                  ) : (
+                ) : (
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transform rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l4-4m-4 4l4 4" />
                  </svg>
-                  )}
+                )}
               </button>
             </div>
           </div>
@@ -988,7 +1040,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
           <button
               onClick={handleRefreshComments}
               disabled={loadingComments}
-              className="p-1.5 text-gray-400 hover:text-blue-300 active:text-blue-500 transition-colors duration-150 rounded-full hover:bg-gray-700/30 active:bg-gray-600/30 focus:outline-none flex-shrink-0"
+              className="p-1.5 text-gray-600 hover:text-blue-600 active:text-blue-700 transition-colors duration-150 rounded-full hover:bg-gray-200/50 active:bg-gray-300/50 focus:outline-none flex-shrink-0"
               title="刷新评论"
           >
               {loadingComments ? (
@@ -1001,7 +1053,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                       transition={{ duration: 0.4, ease: "linear" }}
                       style={{ display: 'flex' }}
                   >
-                      <FaSyncAlt className="h-4 w-4 block" />
+                      <FaSyncAlt className="h-4 w-4 block" strokeWidth={1} />
                   </motion.div>
               )}
           </button>

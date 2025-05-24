@@ -11,6 +11,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css'; // Tailwind styles are likely included here
+import './styles/typography.css'; // 导入字体样式
 import './assets/css/performance-modes.css'; // 导入性能模式CSS
 import './components/FixHighContrastWarning.css'; // 导入修复高对比度警告的CSS
 import 'antd/dist/reset.css'; // 引入 Ant Design v5 的重置样式
@@ -28,9 +29,18 @@ import reportWebVitals from './reportWebVitals';
 import { initializeLazyLoading } from './utils/lazyLoadInitializer';
 // 导入认证工具函数
 import { getStoredToken } from './utils/authUtils';
+// 导入字体配置
+import { fontConfig } from './styles/fontConfig';
 
 // 导入并使用性能监控组件（仅在开发环境中可见）
 import PerformanceMonitor from './components/common/PerformanceMonitor';
+
+// 在DOM加载完成后应用字体配置
+document.addEventListener('DOMContentLoaded', () => {
+  // 动态加载字体
+  fontConfig.loadFontInHead();
+  console.log('字体配置已应用');
+});
 
 // 拦截广告相关请求，减少控制台错误
 if (typeof window !== 'undefined') {

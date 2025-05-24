@@ -171,7 +171,7 @@ const renderOwnImages = (dynamic: DynamicDetails, nestedCount: number, onImageCl
       {dynamic.images.map((img, idx) => (
         <div
           key={idx}
-          className="relative overflow-hidden rounded cursor-pointer"
+          className="relative overflow-hidden cursor-pointer"
           onClick={e => { e.stopPropagation(); onImageClick && onImageClick(dynamic.images!, idx); }}
           style={{
             width: getImageWidth(dynamic.images!.length),
@@ -276,7 +276,7 @@ const InternalDynamicCard = React.memo(({ dynamic, isLast, nestedCount = 0, onIm
         {currentLevelImages.map((img, idx) => (
           <div 
             key={idx} 
-            className="relative overflow-hidden rounded cursor-pointer"
+            className="relative overflow-hidden cursor-pointer"
             onClick={(e) => handleImageClick(e, currentLevelImages, idx)}
             style={{ 
               width: getImageWidth(currentLevelImages.length),
@@ -299,17 +299,13 @@ const InternalDynamicCard = React.memo(({ dynamic, isLast, nestedCount = 0, onIm
     );
   };
   
-  // 如果动态已删除
-  if (dynamic.target_type === 'deleted') {
+  // 如果动态已删除，且是原始动态（没有 original_action），则显示删除信息
+  // 如果是中间层的转发，不要显示删除信息
+  if (dynamic.target_type === 'deleted' && !dynamic.original_action) {
     let deletedMessage = dynamic.target_title || "引用的原始内容已被删除。";
     return (
       <div className="relative">
-        {/* 连接线 - 颜色从蓝色改为白色 */}
-        {!isLast && (
-          <div className="absolute left-3 -bottom-2 h-3 w-0.5 bg-white/20 z-10"></div>
-        )}
-        
-        <div className="p-3 rounded-lg bg-gray-800/30 border border-gray-700/20 hover:bg-gray-800/40 transition-colors cursor-pointer mb-1"
+        <div className="p-3 bg-transparent border-0 border-b border-gray-300 hover:bg-gray-100/30 transition-colors cursor-pointer mb-1"
              onClick={handleCardClick}>
           <div className="flex justify-between items-start mb-1">
             <div className="flex-1 text-xs">
@@ -323,21 +319,53 @@ const InternalDynamicCard = React.memo(({ dynamic, isLast, nestedCount = 0, onIm
                 @{dynamic.sharer_username}
               </Link>
               {dynamic.share_comment && (
-                <span className="text-gray-300 ml-1 break-words">
+                <span className="text-black ml-1 break-words">
                   ：{dynamic.share_comment}
                 </span>
               )}
               {!dynamic.share_comment && (
-                <span className="text-gray-300 ml-1">：转发了动态</span>
+                <span className="text-black ml-1">：转发了动态</span>
               )}
             </div>
           </div>
           
           {renderImages()}
           
-          <div className="p-1.5 bg-gray-800/20 rounded-md border-0 mt-2">
-            <p className="text-xs text-amber-400 italic">{deletedMessage}</p>
+          <div className="p-1.5 bg-transparent border-0 border-t border-gray-300 mt-2">
+            <p className="text-xs text-red-400 font-normal">{deletedMessage}</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // 如果是中间层转发且目标是已删除内容，则仅显示转发信息，不显示删除消息
+  if (dynamic.target_type === 'deleted' && dynamic.original_action) {
+    return (
+      <div className="relative">
+        <div 
+          className="p-3 bg-transparent border-0 border-b border-gray-300 hover:bg-gray-100/30 transition-colors cursor-pointer mb-1"
+          onClick={handleCardClick}
+        >
+          <div className="flex justify-between items-start mb-1">
+            <div className="flex-1 text-xs">
+              <Link 
+                to={dynamic.sharer_id ? `/profile/${dynamic.sharer_id}` : '#'}
+                onClick={(e) => e.stopPropagation()}
+                className="text-blue-400 hover:underline font-medium"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                @{dynamic.sharer_username}
+              </Link>
+              <span className="text-black ml-1">：转发了动态</span>
+            </div>
+            <div className="flex items-center">
+              <span className="text-xs text-gray-500 mr-2">{new Date(dynamic.shared_at).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </div>
+          
+          {renderImages()}
         </div>
       </div>
     );
@@ -346,13 +374,8 @@ const InternalDynamicCard = React.memo(({ dynamic, isLast, nestedCount = 0, onIm
   // 正常动态
   return (
     <div className="relative">
-      {/* 连接线 - 颜色从蓝色改为白色 */}
-      {!isLast && (
-        <div className="absolute left-3 -bottom-2 h-3 w-0.5 bg-white/20 z-10"></div>
-      )}
-      
       <div 
-        className="p-3 rounded-lg bg-gray-800/20 border border-gray-700/20 hover:bg-gray-800/30 transition-colors cursor-pointer mb-1"
+        className="p-3 bg-transparent border-0 border-b border-gray-300 hover:bg-gray-100/30 transition-colors cursor-pointer mb-1"
         onClick={handleCardClick}
       >
         {/* 折叠状态 - 简洁模式 */}
@@ -369,7 +392,7 @@ const InternalDynamicCard = React.memo(({ dynamic, isLast, nestedCount = 0, onIm
                 >
                   @{dynamic.sharer_username}
                 </Link>
-                <span className="text-gray-300 truncate ml-1">
+                <span className="text-black truncate ml-1">
                   ：{(() => {
                     const commentText = dynamic.share_comment ? replaceImageMarkdown(dynamic.share_comment) : '';
                     const targetTitleText = dynamic.target_title || '';
@@ -406,7 +429,7 @@ const InternalDynamicCard = React.memo(({ dynamic, isLast, nestedCount = 0, onIm
                 </Link>
                 {/* 确保冒号始终存在 */}
                 {dynamic.share_comment && (
-                  <span className="text-gray-300 ml-1 break-words text-xs">
+                  <span className="text-black ml-1 break-words text-xs">
                     ：<ReactMarkdown 
                       remarkPlugins={[remarkGfm]} 
                       components={{
@@ -419,10 +442,10 @@ const InternalDynamicCard = React.memo(({ dynamic, isLast, nestedCount = 0, onIm
                   </span>
                 )}
                 {!dynamic.share_comment && dynamic.is_repost && (
-                  <span className="text-gray-300 ml-1 text-xs">：转发了动态</span>
+                  <span className="text-black ml-1 text-xs">：转发了动态</span>
                 )}
                 {!dynamic.share_comment && !dynamic.is_repost && dynamic.target_type && (
-                  <span className="text-gray-300 ml-1 text-xs">：分享了{getTargetTypeText(dynamic.target_type)}</span>
+                  <span className="text-black ml-1 text-xs">：分享了{getTargetTypeText(dynamic.target_type)}</span>
                 )}
               </div>
               <div className="flex items-center">
@@ -435,8 +458,8 @@ const InternalDynamicCard = React.memo(({ dynamic, isLast, nestedCount = 0, onIm
 
             {/* 目标内容 */}
             {(dynamic.target_title || dynamic.target_slug) && dynamic.target_type !== 'action' && (
-              <div className="text-xs p-1 bg-gray-700/20 rounded mt-1.5 mb-1 flex items-center"> 
-                <span className="text-gray-400 whitespace-nowrap">
+              <div className="text-xs p-1 bg-transparent border-0 border-t border-gray-300 mt-1.5 mb-1 flex items-center"> 
+                <span className="text-black whitespace-nowrap">
                   {getTargetTypeText(dynamic.target_type)}：
                 </span>
                 {generateTargetLink(dynamic.target_type, dynamic.target_slug, dynamic.target_id) ? (
@@ -452,7 +475,7 @@ const InternalDynamicCard = React.memo(({ dynamic, isLast, nestedCount = 0, onIm
                     {dynamic.target_title}
                   </Link>
                 ) : (
-                  <span className="text-gray-300 ml-1 truncate">{dynamic.target_title}</span>
+                  <span className="text-black truncate ml-1">{dynamic.target_title}</span>
                 )}
               </div>
             )}
@@ -539,7 +562,7 @@ const QuotedDynamicViewComponent: React.FC<QuotedDynamicViewProps> = ({
   // 如果没有动态数据，显示占位符
   if (!dynamic) {
     return (
-      <div className="p-2 bg-gray-800/10 rounded-lg text-xs text-gray-500 italic mt-2 border border-gray-700/20">
+      <div className="p-2 bg-transparent rounded-lg text-xs text-gray-500 italic mt-2 border border-black">
         原始分享内容丢失或无法加载。
       </div>
     );
@@ -573,8 +596,7 @@ const QuotedDynamicViewComponent: React.FC<QuotedDynamicViewProps> = ({
   };
   
   return (
-    <div className="mt-2 relative pl-4 border-l border-white/20">
-      {/* 移除高度限制，允许内容自然流动 */}
+    <div className="mt-2 relative pl-4">
       <div 
         ref={containerRef}
         className="transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
@@ -637,9 +659,6 @@ const QuotedDynamicViewComponent: React.FC<QuotedDynamicViewProps> = ({
         <div 
           className={`flex justify-center items-center mb-2 mt-1 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${showAll ? 'opacity-0 max-h-0 invisible' : 'opacity-100 max-h-10 visible'}`}
         >
-          {/* 连接线 */}
-          {hasMore && <div className="absolute left-3 -top-1 h-2 w-0.5 bg-white/20 z-10 transition-opacity duration-300 ease-in-out"></div>}
-          
           {hasMore && (
             <button 
               onClick={handleToggleClick}
@@ -658,8 +677,6 @@ const QuotedDynamicViewComponent: React.FC<QuotedDynamicViewProps> = ({
         <div 
           className={`flex justify-center items-center mb-2 mt-1 transition-opacity duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${showAll && dynamicChain.length > 3 ? 'opacity-100 visible' : 'opacity-0 invisible h-0'}`}
         >
-          {/* 连接线 - 调整，使其在按钮可见时才显示 */}
-          <div className="absolute left-3 -top-1 h-2 w-0.5 bg-white/20 z-10"></div>
           {dynamicChain.length > 3 && (
             <button 
               onClick={handleToggleClick}

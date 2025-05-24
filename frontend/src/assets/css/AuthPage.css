@@ -20,7 +20,7 @@ body.auth-active {
 }
 
 .auth-page-container {
-  background: linear-gradient(32deg, #61177c, #004d65); /* Match your app's main gradient */
+  background: #ffffff; /* 修改为纯白色背景 */
   min-height: 100vh; /* Full viewport height */
   display: flex;
   align-items: center;

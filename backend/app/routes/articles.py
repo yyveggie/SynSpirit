@@ -37,6 +37,8 @@ from datetime import datetime
 from app.utils.cos_storage import cos_storage  # 导入COS存储工具类
 from flask_cors import cross_origin
 import json
+# 导入article_utils模块
+from app.utils.article_utils import update_article_view_count, get_article_by_slug, get_article_by_id
 
 articles_bp = Blueprint('articles', __name__, template_folder='../../templates')
 
@@ -288,7 +290,7 @@ def get_articles_api():
     # --- 结束修改 ---
     
     # 原有的过滤条件保持不变
-    query = query.filter(Article.is_published == True)
+    query = query.filter(Article.is_published == True, Article.is_deleted == False)
     
     if category:
         query = query.filter_by(category=category)
@@ -401,8 +403,8 @@ def get_articles_api():
 @articles_bp.route('/<int:id>', methods=['GET'])
 def get_article_api(id):
     """获取特定文章详情，并附加用户交互状态"""
-    # --- 修改: 使用正确的 relationship 名称 --- 
-    article = Article.query.options(joinedload(Article.author_user)).get_or_404(id)
+    # --- 修改: 使用正确的 relationship 名称，并添加is_deleted过滤条件 --- 
+    article = Article.query.filter_by(id=id, is_deleted=False).options(joinedload(Article.author_user)).first_or_404()
     # --- 结束修改 ---
 
     is_liked = False
@@ -447,22 +449,7 @@ def get_article_api(id):
     article_dict['collect_action_id'] = collect_action_id
 
     # --- 更新浏览量 --- 
-    try:
-        # 创建新的数据库会话，避免使用可能已关闭的主会话
-        from sqlalchemy.orm import Session
-        from sqlalchemy import update
-        from app.models.article import Article as ArticleModel
-        
-        # 使用SQL更新语句而不是ORM对象更新
-        db.session.execute(
-            update(ArticleModel)
-            .where(ArticleModel.id == article.id)
-            .values(view_count=(article.view_count or 0) + 1)
-        )
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"更新文章 {article.slug} 浏览量失败: {e}")
+    update_article_view_count(article)
     # --- 结束更新浏览量 ---
 
     return jsonify(article_dict) # 返回包含交互状态的字典
@@ -747,56 +734,42 @@ def update_article_api(slug):
 @jwt_required()
 def delete_article_api(slug):
     """
-    删除文章 API
-    --- 新增 --- 
-    当文章被删除时，相关的 UserAction (例如分享这条文章的动态)
-    不会被级联删除，而是其 original_content_deleted 字段会被标记为 True。
+    软删除文章 API
+    --- 修改实现 ---
+    不再真正删除文章，而是将文章的is_deleted标记为True
+    保留文章记录及其关联的交互记录，避免外键约束冲突
+    同时维持历史记录的完整性
     """
-    article = Article.query.filter_by(slug=slug).first()
-    if not article:
-        return jsonify({"error": "未找到文章"}), 404
-
-    # 获取当前用户ID。注意：get_jwt_identity() 返回的就是用户ID（int），不是字典，因此不能用 ['id'] 取值。
+    # 获取当前用户ID
     current_user_id = get_jwt_identity()
-    if article.user_id != current_user_id and not is_admin(get_jwt_identity()):
-        return jsonify({"error": "权限不足"}), 403
-
+    
     try:
-        # --- 新增：在删除文章前，标记相关的 UserAction --- 
-        # actions_to_update = UserAction.query.filter_by(target_type='article', target_id=article.id).all()
-        # for action in actions_to_update:
-        #     action.original_content_deleted = True # 移除这一行
-        # current_app.logger.info(f"Marked {len(actions_to_update)} UserActions' original_content_deleted to True for article {article.id}")
-        # --- 结束新增 ---
+        # 使用新的会话查询文章
+        article = db.session.query(Article).filter_by(slug=slug).first()
+        if not article:
+            return jsonify({"error": "未找到文章"}), 404
 
-        # 如果文章有封面图片，则删除它
-        if article.cover_image:
-            # 假设 cover_image 存储的是相对路径或文件名
-            # full_image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'covers', article.cover_image)
-            # if os.path.exists(full_image_path):
-            #     os.remove(full_image_path)
-            # 修改为使用 cos_storage.delete_file，并传入完整的 URL 或 COS key
-            # 假设 article.cover_image 已经是完整的 COS URL
-            # 如果 article.cover_image 只是文件名或相对路径，需要先构建完整的 COS key
-            # 这里我们假设它已经是可以直接被删除服务识别的路径
-            if cos_storage.delete_file(article.cover_image):
-                current_app.logger.info(f"封面图片 {article.cover_image} 已从COS删除")
-            else:
-                current_app.logger.warning(f"尝试从COS删除封面图片 {article.cover_image} 失败或文件不存在")
+        # 权限检查
+        if article.user_id != current_user_id and not is_admin(current_user_id):
+            return jsonify({"error": "权限不足"}), 403
 
-        # 删除文章时，与之关联的评论也会根据模型的 cascade 设置被删除
-        # 删除文章时，与之关联的回答也会根据模型的 cascade 设置被删除
-        # 删除文章时，与之关联的用户行为(UserAction)现在不会被删除，而是被标记
-        
-        # 在删除文章之前，先刷新会话，确保标记 UserAction 的更改被提交（如果上面标记逻辑恢复的话）
-        # db.session.flush() # 如果上面标记逻辑恢复，可以取消注释这行
-
-        db.session.delete(article)
+        # 使用SQL更新而不是ORM对象更新，避免会话状态问题
+        db.session.execute(
+            "UPDATE articles SET is_deleted = TRUE, updated_at = NOW() WHERE id = :article_id",
+            {"article_id": article.id}
+        )
         db.session.commit()
+        
+        current_app.logger.info(f"文章已软删除: ID={article.id}, slug={article.slug}")
         return jsonify({"message": "文章删除成功"}), 200
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"删除文章失败: {e}")
+        # 确保回滚任何未完成的事务
+        try:
+            db.session.rollback()
+        except:
+            pass
+        
+        current_app.logger.error(f"软删除文章失败: {e}")
         return jsonify({"error": f"删除文章失败: {str(e)}"}), 500
 
 @articles_bp.route('/search', methods=['GET'])
@@ -813,7 +786,8 @@ def search_articles_api():
         (Article.title.ilike(search) | 
          Article.content.ilike(search) | 
          Article.summary.ilike(search)) &
-        Article.is_published == True
+        Article.is_published == True &
+        Article.is_deleted == False  # 添加过滤条件，排除已删除文章
     ).limit(10).all()
     
     return jsonify({
@@ -825,7 +799,8 @@ def get_article_categories_api():
     """获取所有文章分类"""
     categories = db.session.query(Article.category).filter(
         Article.category.isnot(None),
-        Article.is_published == True
+        Article.is_published == True,
+        Article.is_deleted == False  # 添加过滤条件，排除已删除文章
     ).distinct().all()
     
     return jsonify({
@@ -836,7 +811,7 @@ def get_article_categories_api():
 @limiter.exempt  # 添加豁免速率限制，因为这是查看文章详情的关键API
 def get_article_by_slug_api(slug):
     """通过 slug 获取文章/帖子详情，并附加用户交互状态"""
-    article = Article.query.filter_by(slug=slug).options(joinedload(Article.author_user)).first_or_404()
+    article = Article.query.filter_by(slug=slug, is_deleted=False).options(joinedload(Article.author_user)).first_or_404()
 
     is_liked = False
     is_collected = False
@@ -895,22 +870,7 @@ def get_article_by_slug_api(slug):
     # --- 结束新增 ---
 
     # --- 更新浏览量 --- 
-    try:
-        # 创建新的数据库会话，避免使用可能已关闭的主会话
-        from sqlalchemy.orm import Session
-        from sqlalchemy import update
-        from app.models.article import Article as ArticleModel
-        
-        # 使用SQL更新语句而不是ORM对象更新
-        db.session.execute(
-            update(ArticleModel)
-            .where(ArticleModel.id == article.id)
-            .values(view_count=(article.view_count or 0) + 1)
-        )
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"更新文章 {article.slug} 浏览量失败: {e}")
+    update_article_view_count(article)
     # --- 结束更新浏览量 ---
 
     # --- 修改：在返回的字典中包含分享次数 --- 
@@ -950,21 +910,8 @@ def view_article(slug):
         # If not found by slug or not published, return 404
         abort(404)
         
-    # 更新浏览量 - 使用独立SQL更新
-    try:
-        from app.models.article import Article as ArticleModel
-        
-        # 使用SQL更新语句而不是ORM对象更新
-        db.session.execute(
-            update(ArticleModel)
-            .where(ArticleModel.id == article.id)
-            .values(view_count=(article.view_count or 0) + 1)
-        )
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        # 记录错误，但继续显示文章
-        current_app.logger.error(f"更新文章 {article.slug} 浏览量失败: {e}")
+    # 更新浏览量
+    update_article_view_count(article)
 
     return render_template('article_detail.html', article=article)
 

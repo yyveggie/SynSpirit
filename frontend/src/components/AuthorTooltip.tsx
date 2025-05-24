@@ -69,7 +69,7 @@ const AuthorTooltip: React.FC<AuthorTooltipProps> = ({ nickname, bio, tags, isVi
     <AnimatePresence>
       {isVisible && (
         <motion.div 
-          className="fixed z-[9999] bg-gray-800/50 backdrop-blur-md rounded-md shadow-lg p-4 min-w-[250px] max-w-[350px] text-sm"
+          className="fixed z-[9999] bg-white backdrop-blur-md rounded-md shadow-lg p-4 min-w-[250px] max-w-[350px] text-sm border border-gray-200"
           style={{ 
             top: `${position.top}px`, 
             left: `${position.left}px`,
@@ -80,11 +80,11 @@ const AuthorTooltip: React.FC<AuthorTooltipProps> = ({ nickname, bio, tags, isVi
           exit={{ opacity: 0, y: 10 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
         >
-          <div className="absolute -bottom-2 left-[calc(50%-4px)] w-4 h-4 bg-gray-800/50 backdrop-blur-md transform rotate-45"></div>
+          <div className="absolute -bottom-2 left-[calc(50%-4px)] w-4 h-4 bg-white backdrop-blur-md transform rotate-45 border-b border-r border-gray-200"></div>
           
           <div className="flex items-center gap-3 mb-2">
             {/* 头像显示 */}
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-700 flex-shrink-0">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
               {avatarUrl ? (
                 <img 
                   src={avatarUrl} 
@@ -96,25 +96,25 @@ const AuthorTooltip: React.FC<AuthorTooltipProps> = ({ nickname, bio, tags, isVi
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-700 text-gray-200 text-sm">
+                <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-700 text-sm">
                   {nickname.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
-            <h4 className="text-blue-400 font-semibold">{nickname}</h4>
+            <h4 className="text-blue-600 font-semibold">{nickname}</h4>
           </div>
           
-          {bio ? <p className="text-gray-300 mb-2">{bio}</p> : <p className="text-gray-300 mb-2">这个作者很懒，还没有填写个人简介</p>}
+          {bio ? <p className="text-gray-800 mb-2">{bio}</p> : <p className="text-gray-700 mb-2">这个作者很懒，还没有填写个人简介</p>}
           {tags && tags.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {tags.map((tag, index) => (
-                <span key={index} className="bg-blue-900/40 text-blue-200 px-1.5 py-0.5 text-xs rounded">
+                <span key={index} className="bg-blue-100 text-blue-700 px-1.5 py-0.5 text-xs rounded">
                   {tag}
                 </span>
               ))}
             </div>
           ) : (
-            <div className="text-gray-400 text-xs">暂无标签</div>
+            <div className="text-gray-600 text-xs">暂无标签</div>
           )}
         </motion.div>
       )}

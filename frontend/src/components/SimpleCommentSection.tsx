@@ -154,7 +154,7 @@ const CommentItem = memo(({
   // 时间样式 - 使用内联样式确保足够小
   const timeStyle = {
     fontSize: '0.6rem',
-    color: '#9ca3af',
+    color: '#4b5563',
     opacity: 0.8,
     marginLeft: '0.5rem'
   };
@@ -163,7 +163,7 @@ const CommentItem = memo(({
     <div className={`${level > 0 ? 'pt-1 pb-1' : 'py-2'} ${getMarginLeft(level)}`}>
       <div className="flex items-start">
         {!isDeleted ? (
-          <Link to={`/profile/${comment.user?.id || 0}`} className="flex-shrink-0 mr-1">
+          <Link to={`/profile/${comment.user?.id || 0}`} className="flex-shrink-0 mr-3">
             <UserAvatar 
               userId={comment.user?.id}
               username={comment.user?.nickname || '匿名用户'}
@@ -174,8 +174,8 @@ const CommentItem = memo(({
             />
           </Link>
         ) : (
-          <div className={`flex-shrink-0 mr-1 ${level > 0 ? "w-5 h-5" : "w-6 h-6"} bg-gray-700/30 rounded-full flex items-center justify-center`}>
-            <span className="text-gray-400 text-xs">?</span>
+          <div className={`flex-shrink-0 mr-3 ${level > 0 ? "w-5 h-5" : "w-6 h-6"} bg-gray-200 rounded-full flex items-center justify-center`}>
+            <span className="text-gray-500 text-xs">?</span>
           </div>
         )}
         <div className="flex-1 min-w-0">
@@ -184,7 +184,7 @@ const CommentItem = memo(({
               <div className="flex items-center mb-0.5">
                 <Link 
                   to={`/profile/${comment.user?.id || 0}`}
-                  className={`font-medium ${isAI ? 'text-purple-400 hover:text-purple-300' : 'text-blue-400 hover:text-blue-300'} text-xs`}
+                  className={`font-medium ${isAI ? 'text-purple-700 hover:text-purple-900' : 'text-blue-700 hover:text-blue-900'} text-xs`}
                 >
                   {comment.user?.nickname || '匿名用户'}
                 </Link>
@@ -192,15 +192,18 @@ const CommentItem = memo(({
                   {formatDate(comment.created_at)}
                 </span>
               </div>
-              <div className="text-xs text-gray-300 break-words">
+              <div className="text-xs text-gray-900 break-words">
                 <TextWithLinks text={comment.content} />
               </div>
               <div className="mt-1 text-xs text-gray-500 flex items-center">
                 <button 
                   onClick={() => handleLikeComment(comment.id, comment.is_liked_by_current_user)}
-                  className={`flex items-center hover:text-blue-400 transition-colors ${comment.is_liked_by_current_user ? 'text-blue-500' : 'text-gray-500'}`}
                   disabled={!isLoggedIn}
-                  title={isLoggedIn ? '点赞评论' : '请先登录'}
+                  className={`flex items-center space-x-1 ${
+                    comment.is_liked_by_current_user 
+                      ? 'text-red-500' 
+                      : 'text-gray-500 hover:text-red-400'
+                  } transition-colors`}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className={`${level > 0 ? 'h-3 w-3' : 'h-3 w-3'} mr-1`} fill={comment.is_liked_by_current_user ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />

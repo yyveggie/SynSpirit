@@ -112,8 +112,8 @@ const NavLink = ({ to, children, title }: { to: string; children: React.ReactNod
       title={title || String(children)}
       className={`flex items-center px-2 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] ${
         isActive(to)
-          ? 'text-white bg-gradient-to-r from-green-200/30 to-blue-200/30 opacity-100 shadow-inner'
-          : 'text-gray-300 hover:bg-gradient-to-r hover:from-green-200/10 hover:to-blue-200/10 hover:opacity-90 hover:shadow-sm'
+          ? 'text-black bg-gradient-to-r from-green-200/30 to-blue-200/30 opacity-100 shadow-inner'
+          : 'text-black hover:bg-gradient-to-r hover:from-green-200/10 hover:to-blue-200/10 hover:opacity-90 hover:shadow-sm'
       }`}
     >
       {children}
@@ -237,7 +237,7 @@ const Navbar: React.FC<{ className?: string }> = ({ className }) => {
             <CustomLink 
               to="/" 
               forceSameTab={true}
-              className="flex items-center text-xl font-serif font-semibold text-white hover:text-gray-300 transition-colors duration-200"
+              className="flex items-center text-xl font-serif font-semibold text-black hover:text-gray-700 transition-colors duration-200"
               style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif' }}
             >
               SynSpirit
@@ -287,8 +287,8 @@ const Navbar: React.FC<{ className?: string }> = ({ className }) => {
                       aria-label="创建新内容"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 4V20" stroke="rgba(180, 230, 230, 0.9)" strokeWidth="2.2" strokeLinecap="round" />
-                        <path d="M4 12H20" stroke="rgba(180, 230, 230, 0.9)" strokeWidth="2.2" strokeLinecap="round" />
+                        <path d="M12 4V20" stroke="black" strokeWidth="2.2" strokeLinecap="round" />
+                        <path d="M4 12H20" stroke="black" strokeWidth="2.2" strokeLinecap="round" />
                       </svg>
                     </motion.button>
                     
@@ -306,7 +306,7 @@ const Navbar: React.FC<{ className?: string }> = ({ className }) => {
                           }}
                         >
                           <motion.div 
-                            className="w-full bg-gray-800/75 backdrop-blur-md border border-gray-700/30 shadow-xl rounded-lg overflow-hidden"
+                            className="w-full bg-white border border-gray-200 shadow-xl rounded-lg overflow-hidden"
                             variants={{
                               hidden: { opacity: 0 },
                               show: { opacity: 1 }
@@ -320,7 +320,7 @@ const Navbar: React.FC<{ className?: string }> = ({ className }) => {
                             >
                               <CustomLink
                                 to="/new-article"
-                                className="block px-3 py-1.5 text-xs text-white font-medium hover:bg-white/15 transition-colors duration-150 w-full text-left"
+                                className="block px-3 py-1.5 text-xs text-black font-medium hover:bg-gray-100 transition-colors duration-150 w-full text-left"
                                 onClick={() => setIsWriteMenuOpen(false)}
                               >
                                 写文章
@@ -334,7 +334,7 @@ const Navbar: React.FC<{ className?: string }> = ({ className }) => {
                               className="w-full"
                             >
                               <button
-                                className="block px-3 py-1.5 text-xs text-white font-medium hover:bg-white/15 transition-colors duration-150 w-full text-left"
+                                className="block px-3 py-1.5 text-xs text-black font-medium hover:bg-gray-100 transition-colors duration-150 w-full text-left"
                                 onClick={(e) => {
                                   e.preventDefault();
                                   setIsWriteMenuOpen(false);
@@ -393,7 +393,7 @@ const Navbar: React.FC<{ className?: string }> = ({ className }) => {
                           }}
                         >
                           <motion.div 
-                            className="w-full bg-gray-800/75 backdrop-blur-md border border-gray-700/30 shadow-xl rounded-lg overflow-hidden"
+                            className="w-full bg-white border border-gray-200 shadow-xl rounded-lg overflow-hidden"
                             variants={{
                               hidden: { opacity: 0 },
                               show: { opacity: 1 }
@@ -407,7 +407,7 @@ const Navbar: React.FC<{ className?: string }> = ({ className }) => {
                             >
                               <button
                                 onClick={goToProfile}
-                                className="block px-3 py-1.5 text-xs text-white font-medium hover:bg-white/15 transition-colors duration-150 w-full text-left"
+                                className="block px-3 py-1.5 text-xs text-black font-medium hover:bg-gray-100 transition-colors duration-150 w-full text-left"
                               >
                                 个人主页
                               </button>
@@ -421,7 +421,7 @@ const Navbar: React.FC<{ className?: string }> = ({ className }) => {
                             >
                               <button
                                 onClick={handleLogoutClick}
-                                className="block px-3 py-1.5 text-xs text-white font-medium hover:bg-white/15 transition-colors duration-150 w-full text-left"
+                                className="block px-3 py-1.5 text-xs text-black font-medium hover:bg-gray-100 transition-colors duration-150 w-full text-left"
                               >
                                 退出登录
                               </button>

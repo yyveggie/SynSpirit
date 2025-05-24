@@ -1,0 +1,29 @@
+/**
+ * 全局字体样式文件
+ * 定义网站的字体样式和设置
+ */
+
+/* 导入 Noto Sans SC 字体 */
+@import url('https://fonts.geekzu.org/css2?family=Noto+Sans+SC:wght@200&display=swap');
+
+/* 全局字体设置 */
+body {
+  font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-weight: 350;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 确保全局一致的文本颜色 */
+body, h1, h2, h3, h4, h5, h6, p, span, a, div, button {
+  color: #000000;
+}
+
+/* 链接颜色 */
+a {
+  color: #1a73e8;
+}
+
+a:hover {
+  color: #0f4fc1;
+} 

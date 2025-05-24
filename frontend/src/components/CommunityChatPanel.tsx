@@ -667,7 +667,7 @@ const CommunityChatPanel: React.FC<CommunityChatPanelProps> = ({
             <img 
               src={msg.avatar || '/default-avatar.png'} 
               alt={msg.nickname || msg.username || '用户'} 
-              className="w-5 h-5 rounded-full mr-2" 
+              className="w-5 h-5 rounded-full mr-3" 
               onError={(e) => (e.currentTarget.src = '/default-avatar.png')} 
             /> 
             <span className="text-xs text-gray-400 font-medium">{msg.nickname || msg.username || '匿名用户'}</span> 

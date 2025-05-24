@@ -25,42 +25,29 @@ interface UserAvatarProps {
   showName?: boolean; // 是否显示用户名
 }
 
-/**
- * 处理头像URL，确保路径格式正确
- * @param avatarUrl 头像URL（可能是相对路径或绝对路径）
- * @returns 处理后的完整URL或undefined
- */
-const getAvatarUrl = (avatarUrl: string | null | undefined): string | undefined => {
-  if (!avatarUrl) {
-    return undefined;
+// 获取头像URL的辅助函数
+const getAvatarUrl = (avatarUrl?: string | null): string | null => {
+  if (!avatarUrl) return null;
+  
+  // 如果是完整URL，直接返回
+  if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
+    return avatarUrl;
   }
-
-  let processedUrl = avatarUrl;
-  const isFullUrl = avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://');
-  const isStaticPath = avatarUrl.startsWith('/static') || avatarUrl.startsWith('uploads/');
-  const isFilenameOnly = !avatarUrl.includes('/');
-
-  if (isFullUrl) {
-    processedUrl = avatarUrl;
-  } else if (isStaticPath) {
-    const urlParts = API_BASE_URL.split('/');
-    const baseUrlWithoutPath = `${urlParts[0]}//${urlParts[2]}`;
-    const relativePath = avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`;
-    if (avatarUrl.startsWith('/static')) {
-      processedUrl = `${baseUrlWithoutPath}${relativePath}`;
-    } else {
-      // 假设 uploads/ 总是相对于 /static/
-      processedUrl = `${baseUrlWithoutPath}/static/${avatarUrl}`;
-    }
-  } else if (isFilenameOnly) {
-    const urlParts = API_BASE_URL.split('/');
-    const baseUrlWithoutPath = `${urlParts[0]}//${urlParts[2]}`;
-    // 假设裸文件名总是在 /static/uploads/ 下
-    processedUrl = `${baseUrlWithoutPath}/static/uploads/${avatarUrl}`;
-  } 
-  // else: 如果不是以上情况 (例如 data: URL)，直接使用原始 avatarUrl
-
-  return processedUrl;
+  
+  // 如果是相对路径，但没有API_BASE_URL前缀，添加前缀
+  // 排除已经是完整路径的情况，例如已经包含 /media/
+  if (!avatarUrl.startsWith('/')) {
+    // 如果不是以斜杠开头，确保路径正确
+    return `${API_BASE_URL}/${avatarUrl}`;
+  }
+  
+  // 处理以斜杠开头的情况，避免双斜杠
+  if (avatarUrl.startsWith('/') && API_BASE_URL.endsWith('/')) {
+    return `${API_BASE_URL}${avatarUrl.substring(1)}`;
+  }
+  
+  // 一般情况，直接拼接
+  return `${API_BASE_URL}${avatarUrl}`;
 };
 
 const UserAvatar: React.FC<UserAvatarProps> = ({ 
@@ -89,13 +76,13 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   const isInsideLink = useInsideLink();
 
   // 渲染头像内容的函数
-  const renderAvatarContent = () => (
+  const renderAvatarContent = () =>
     <>
         {processedAvatarUrl ? (
           <img 
             src={processedAvatarUrl} 
             alt={`${username}的头像`} 
-          className={`rounded-full ${showName ? 'mr-2' : ''} object-cover ${avatarSizeClass}`}
+          className={`rounded-full object-cover ${avatarSizeClass}`}
             onError={(e) => {
               // 保持失败时的占位符逻辑
               const imgElement = e.currentTarget as HTMLImageElement;
@@ -111,26 +98,28 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
         ) : null /* 如果一开始就没有 URL，则不渲染 img 标签 */}
         {/* 首字母占位符 (初始隐藏，加载失败或无 URL 时显示) */} 
         <div 
-        className={`rounded-full ${showName ? 'mr-2' : ''} flex items-center justify-center bg-gray-600 text-white font-semibold ${avatarSizeClass} ${processedAvatarUrl ? 'hidden' : ''}`}
+        className={`rounded-full flex items-center justify-center bg-gray-600 text-white font-semibold ${avatarSizeClass} ${processedAvatarUrl ? 'hidden' : ''}`}
           style={processedAvatarUrl ? {display: 'none'} : {display: 'flex'}} // 初始根据是否有 URL 控制显示
           title={username}
         >
           {username?.charAt(0).toUpperCase() || '?'} 
         </div>
     </>
-  );
+  ;
 
   return (
     <div className={containerClasses}>
       {/* 头像部分 */}
       {isInsideLink ? (
         // 如果已经在Link内，直接渲染头像内容
-        renderAvatarContent()
+        <div className="flex-shrink-0">
+          {renderAvatarContent()}
+        </div>
       ) : (
         // 否则，用Link包裹头像内容
         <Link to={profileLink} title={`查看 ${username} 的个人主页`} className="flex-shrink-0">
           {renderAvatarContent()}
-      </Link>
+        </Link>
       )}
 
       {/* 用户名链接 - 仅在 showName 为 true 时显示 */}

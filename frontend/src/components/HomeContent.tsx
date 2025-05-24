@@ -295,7 +295,7 @@ const HomeContent: React.FC<HomeContentProps> = ({
               ) : (
                 <button 
                   onClick={loadMoreContent}
-                  className="px-4 py-2 bg-indigo-700/30 hover:bg-indigo-700/50 rounded-md text-indigo-200 transition-colors duration-200"
+                  className="px-4 py-2 bg-white hover:bg-gray-50 rounded-md text-black transition-colors duration-200 border border-gray-200"
                 >
                   加载更多
                 </button>

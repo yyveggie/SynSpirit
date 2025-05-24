@@ -13,18 +13,18 @@
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>SynSpirit</title>
     
-    <!-- 关键内联样式：确保在任何CSS或JS加载前就设置深色背景 -->
+    <!-- 关键内联样式：确保在任何CSS或JS加载前就设置白色背景 -->
     <style>
       :root {
-        color-scheme: dark;
-        --bg-base-color: #437a7a;
+        color-scheme: light;
+        --bg-base-color: #ffffff;
+        --bg-gradient: none; /* 移除渐变效果 */
       }
       
       html {
         background-color: var(--bg-base-color) !important;
-        background-image: -webkit-linear-gradient(45deg, #437a7a, #632147) !important;
-        background-image: linear-gradient(45deg, #437a7a, #632147) !important;
-        color: white;
+        background-image: none !important; /* 移除渐变背景 */
+        color: #000000;
         height: 100%;
         min-height: 100%;
         margin: 0;
@@ -32,7 +32,7 @@
       }
       
       body {
-        color: white;
+        color: #000000;
         height: 100%;
         min-height: 100%;
         margin: 0;
@@ -54,8 +54,7 @@
         right: 0;
         bottom: 0;
         background-color: var(--bg-base-color);
-        background-image: -webkit-linear-gradient(45deg, #437a7a, #632147);
-        background-image: linear-gradient(45deg, #437a7a, #632147);
+        background-image: none; /* 移除渐变背景 */
         z-index: -1;
         transition: opacity 0.5s ease;
       }
@@ -66,12 +65,12 @@
       // 使用CSS变量而不是硬编码颜色
       document.documentElement.style.backgroundColor = "var(--bg-base-color)";
       document.documentElement.style.backgroundImage = "var(--bg-gradient)";
-      document.documentElement.style.color = "white";
+      document.documentElement.style.color = "#000000";
       
       if (window.opener) {
         document.body.style.backgroundColor = "var(--bg-base-color)";
         document.body.style.backgroundImage = "var(--bg-gradient)";
-        document.body.style.color = "white";
+        document.body.style.color = "#000000";
       }
       
       document.addEventListener("DOMContentLoaded", function() {

@@ -662,7 +662,7 @@ const ArticlePage: React.FC = () => {
   // --- Success State Rendering (Main JSX) --- 
   return (
     <motion.div 
-      className="article-detail-container bg-transparent text-white min-h-screen" // 确保背景透明
+      className="article-detail-container bg-transparent text-black min-h-screen" // 修改为黑色文本
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4, delay: 0.1 }} 
@@ -686,13 +686,13 @@ const ArticlePage: React.FC = () => {
           <header className="mb-8">
             {/* 标题单独一行 - 更新字体大小 */}
             <div className="mb-4">
-              <h1 className="text-3xl md:text-4xl font-bold text-white break-words"> {/* Updated title classes */}
+              <h1 className="text-3xl md:text-4xl font-bold text-black break-words"> {/* 更改为黑色标题 */}
                 {article.title}
               </h1>
             </div>
             
             {/* 作者信息、阅读量、标签、按钮在同一行，两端对齐 */}
-            <div className="flex flex-wrap justify-between items-center text-sm text-gray-400 gap-x-4 gap-y-2">
+            <div className="flex flex-wrap justify-between items-center text-sm text-gray-600 gap-x-4 gap-y-2">
               {/* 左侧：作者信息、发布日期、阅读量 - 更新样式和结构 */}
               <div className="flex items-center flex-wrap gap-x-3 gap-y-1"> {/* Reduced gap-x to 3 */}
                 {/* 作者头像和名字 - 使用 AuthorTooltip 包裹 */}
@@ -722,12 +722,12 @@ const ArticlePage: React.FC = () => {
                   {article.author?.id ? (
                     <Link 
                       to={`/profile/${article.author.id}`}
-                      className="text-blue-400 hover:text-blue-300 hover:underline" /* Applied consistent link style */
+                      className="text-blue-600 hover:text-blue-800 hover:underline" /* 更新链接颜色 */
                     >
                       {article.author.nickname || article.author.email?.split('@')[0] || '匿名用户'}
                     </Link>
                   ) : (
-                    <span className="text-blue-400">{/* Apply similar color even if not a link */}
+                    <span className="text-blue-600">{/* 更新颜色 */}
                       {article.author?.nickname || article.author?.email?.split('@')[0] || '匿名用户'}
                     </span>
                   )}
@@ -795,13 +795,13 @@ const ArticlePage: React.FC = () => {
           {/* 文章内容 */}
           <div 
             ref={contentRef} 
-            className="prose prose-lg prose-invert max-w-none article-content-actual mt-8 text-gray-200 
-                       prose-headings:text-white prose-headings:font-semibold 
-                       prose-a:text-blue-400 hover:prose-a:text-blue-300 
-                       prose-strong:text-gray-100 prose-code:text-pink-400 prose-code:bg-gray-800 prose-code:p-1 prose-code:rounded
-                       prose-blockquote:border-l-blue-500 prose-blockquote:text-gray-400 prose-blockquote:not-italic
+            className="prose prose-lg max-w-none article-content-actual mt-8 text-black 
+                       prose-headings:text-black prose-headings:font-semibold 
+                       prose-a:text-blue-600 hover:prose-a:text-blue-800 
+                       prose-strong:text-black prose-code:text-pink-600 prose-code:bg-gray-100 prose-code:p-1 prose-code:rounded
+                       prose-blockquote:border-l-blue-500 prose-blockquote:text-gray-700 prose-blockquote:not-italic
                        prose-img:rounded-md prose-img:shadow-lg prose-img:max-w-full prose-img:mx-auto
-                       prose-table:border-gray-700 prose-th:bg-gray-800 prose-th:text-white prose-td:border-gray-700
+                       prose-table:border-gray-300 prose-th:bg-gray-100 prose-th:text-black prose-td:border-gray-300
                        prose-ul:list-disc prose-ul:ml-5 prose-ol:list-decimal prose-ol:ml-5
                        leading-relaxed"
             dangerouslySetInnerHTML={{ __html: processContentForVideos(article.content) }} 
@@ -809,21 +809,21 @@ const ArticlePage: React.FC = () => {
 
           {/* 系列文章导航 */}
           {article.series_articles && article.series_articles.length > 0 && (
-             <div className="mb-8 p-4 bg-gray-800/30 border border-gray-700/50 rounded-lg backdrop-blur-sm shadow-md"> {/* Enhanced styling */}
-               <h3 className="text-lg font-semibold mb-3 text-orange-300">
+             <div className="mb-8 p-4 bg-gray-100/90 border border-gray-300/50 rounded-lg backdrop-blur-sm shadow-md"> {/* 更新背景样式 */}
+               <h3 className="text-lg font-semibold mb-3 text-black">
                  系列: {article.series_name || '未命名系列'}
                </h3>
                {visibleSeriesStart > 0 && (
                  <button
                    onClick={showEarlierSeries}
-                   className="text-xs text-blue-400 hover:text-blue-300 mb-2 block transition-colors"
+                   className="text-xs text-blue-600 hover:text-blue-800 mb-2 block transition-colors"
                  >
                    ↑ 显示更早
                  </button>
                )}
                <ul className="space-y-1.5"> {/* Increased spacing */}
                  {article.series_articles?.slice(visibleSeriesStart, visibleSeriesEnd + 1).map((seriesArticle, index) => (
-                   <li key={seriesArticle.id} className={`text-sm transition-colors duration-150 ${seriesArticle.is_current ? 'font-semibold text-white bg-white/10 rounded px-2 py-0.5' : 'text-gray-400 hover:text-gray-200'}`}>
+                   <li key={seriesArticle.id} className={`text-sm transition-colors duration-150 ${seriesArticle.is_current ? 'font-semibold text-black bg-gray-200/80 rounded px-2 py-0.5' : 'text-gray-700 hover:text-black'}`}>
                      <Link
                        to={`/article/${seriesArticle.slug}`}
                        className="hover:underline flex items-center"
@@ -831,7 +831,6 @@ const ArticlePage: React.FC = () => {
                      >
                        <span className="mr-2 w-4 text-right">{seriesArticle.series_order}.</span>
                        <span className="truncate">{seriesArticle.title}</span> 
-                       {/* {seriesArticle.is_current && '(当前)'} */}
                      </Link>
                    </li>
                  ))}
@@ -839,7 +838,7 @@ const ArticlePage: React.FC = () => {
                {visibleSeriesEnd < totalSeriesCount - 1 && (
                  <button
                    onClick={showLaterSeries}
-                   className="text-xs text-blue-400 hover:text-blue-300 mt-2 block transition-colors"
+                   className="text-xs text-blue-600 hover:text-blue-800 mt-2 block transition-colors"
                  >
                    ↓ 显示后续
                  </button>

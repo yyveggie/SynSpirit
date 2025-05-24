@@ -352,7 +352,7 @@ const AICollapseChat: React.FC<AICollapseChatProps> = ({ isExpanded, onToggleExp
   return (
     <motion.div
       ref={expandContainerRef}
-      className={`${isExpanded ? 'bg-transparent' : 'bg-black/15'} ${isExpanded ? '' : 'backdrop-blur-md'} ${isExpanded ? '' : 'rounded-lg'} overflow-hidden relative mb-4 ${
+      className={`${isExpanded ? 'bg-transparent border border-gray-500 rounded-lg' : 'bg-transparent'} ${isExpanded ? '' : ''} ${isExpanded ? '' : 'rounded-lg border border-gray-600'} overflow-hidden relative mb-4 ${
         !isExpanded && isHovering ? 'chat-glow-active' : '' // 调整悬停效果类名，如果需要
       }`}
       style={{ 
@@ -505,7 +505,7 @@ const AICollapseChat: React.FC<AICollapseChatProps> = ({ isExpanded, onToggleExp
           
           {/* 展开/收起按钮 */}
           <button 
-            className="text-white/70 hover:text-white transition-colors p-1 rounded-full hover:text-white/90"
+            className="text-black hover:text-gray-700 transition-colors p-1 rounded-full"
             onClick={(e) => {
               e.stopPropagation(); 
               toggleExpand();
@@ -616,7 +616,7 @@ const AICollapseChat: React.FC<AICollapseChatProps> = ({ isExpanded, onToggleExp
                   className={`absolute left-3 z-10 px-3 py-1 rounded-full text-xs transition-all duration-200 ease-in-out transform active:scale-95
                     ${isExploreNextMessage 
                       ? 'bg-indigo-700 text-indigo-100 opacity-90 shadow-lg' // 激活：深靛蓝背景，浅靛蓝文字，轻微不透明，更强阴影
-                      : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white' // 未激活：保持原样或微调
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:text-black' // 未激活：改为灰色背景和黑色文字
                     }`}
                   title={isExploreNextMessage ? "下次提问将搜索站内内容" : "点击以在下次提问时搜索站内内容"}
                 >
@@ -627,7 +627,7 @@ const AICollapseChat: React.FC<AICollapseChatProps> = ({ isExpanded, onToggleExp
                   type="text" value={input} onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={editingMessage ? "编辑消息内容..." : isExploreNextMessage ? "输入问题搜索站内..." : "输入问题与Lynn交流..."}
-                  className="w-full pl-[70px] pr-24 py-2 bg-white/15 text-white placeholder-white/50 rounded-full focus:outline-none focus:ring-1 focus:ring-white/30 focus:bg-white/20 text-sm"
+                  className="w-full pl-[70px] pr-24 py-2 bg-white/80 text-black placeholder-gray-500 rounded-full focus:outline-none focus:ring-1 focus:ring-gray-400 focus:bg-white text-sm"
                   disabled={isLoading || isSearching}
                 />
                 
@@ -638,7 +638,7 @@ const AICollapseChat: React.FC<AICollapseChatProps> = ({ isExpanded, onToggleExp
                       cancelEditMessage();
                       setInput(''); // Clear input field on cancel
                     }}
-                    className="absolute right-20 top-1/2 -translate-y-1/2 p-1.5 text-red-400 hover:text-red-300 bg-white/5 rounded-full hover:bg-white/10 transition-colors"
+                    className="absolute right-20 top-1/2 -translate-y-1/2 p-1.5 text-red-500 hover:text-red-600 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
                     title="取消编辑"
                   >
                     <XCircle size={18} />
@@ -651,7 +651,7 @@ const AICollapseChat: React.FC<AICollapseChatProps> = ({ isExpanded, onToggleExp
                     onClick={() => {
                       stopGenerating();
                     }}
-                    className="absolute right-10 top-1/2 -translate-y-1/2 p-1.5 text-white/70 hover:text-white/90 bg-white/10 rounded-full hover:bg-white/15 transition-colors"
+                    className="absolute right-10 top-1/2 -translate-y-1/2 p-1.5 text-gray-700 hover:text-black bg-gray-200 rounded-full hover:bg-gray-300 transition-colors"
                     title="停止生成"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -663,7 +663,7 @@ const AICollapseChat: React.FC<AICollapseChatProps> = ({ isExpanded, onToggleExp
 
                 <button
                   onClick={handleNewChat}
-                  className="absolute right-2 p-1.5 text-white/70 hover:text-white/90 bg-white/10 rounded-full hover:bg-white/15 transition-colors"
+                  className="absolute right-2 p-1.5 text-gray-700 hover:text-black bg-gray-200 rounded-full hover:bg-gray-300 transition-colors"
                   title="开始新对话"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -688,7 +688,7 @@ const AICollapseChat: React.FC<AICollapseChatProps> = ({ isExpanded, onToggleExp
       {/* 在收起状态下显示问候语 */}
       {!isExpanded && (
         <div className="absolute inset-0 flex items-center justify-center select-none pointer-events-none">
-          <span className="text-purple-300 text-base font-medium drop-shadow-md text-opacity-90">
+          <span className="text-blue-600 text-base font-medium drop-shadow-md">
             {`Hi，${nickname}，${getGreeting()}。尝试点击这里吧。`}
           </span>
         </div>

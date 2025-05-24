@@ -184,7 +184,7 @@ const MainLayout: React.FC = () => {
       <div 
         className="fixed inset-0 w-full h-full overflow-hidden"
         style={{ 
-          background: 'var(--bg-gradient)',
+          background: '#ffffff', /* 修改为纯白色背景 */
           zIndex: -10,
           opacity: 1
         }}

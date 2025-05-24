@@ -1030,7 +1030,7 @@ def notify_reply_to_comment_task(self, comment_id: int):
                 return f"Reply comment {comment_id} is deleted."
 
             # 检查回复的父评论ID
-            parent_comment_id = reply.parent_comment_id
+            parent_comment_id = reply.parent_id
             if not parent_comment_id:
                 logger.info(f"[TASK_INFO] Comment {comment_id} is not a reply. Skipping reply notification.")
                 return f"Comment {comment_id} is not a reply to another comment."

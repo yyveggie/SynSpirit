@@ -186,7 +186,7 @@ const DynamicTimelineView: React.FC = () => {
                     />
                     <ActionCommentSection 
                       actionId={dynamic.action_id}
-                      wrapperClassName="relative w-[750px] max-w-[750px] mx-auto mt-1 max-h-[450px] overflow-y-auto pr-0 bg-opacity-5 bg-purple-900 rounded-md p-2"
+                      wrapperClassName="relative w-[750px] max-w-[750px] mx-auto mt-1 max-h-[450px] overflow-y-auto pr-0 p-2 border-0"
                       wrapperStyle={{ scrollbarWidth: 'thin' }}
                     />
                   </div>
@@ -282,7 +282,7 @@ const DynamicTimelineView: React.FC = () => {
   };
 
   return (
-    <div className="w-full px-0 text-white relative h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+    <div className="w-full px-0 text-black relative h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
       {/* 关闭按钮移到这里，脱离滚动容器的影响 */}
       <button 
         onClick={handleClose} 

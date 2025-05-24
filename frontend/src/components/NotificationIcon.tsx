@@ -146,7 +146,7 @@ const NotificationIcon: React.FC = () => {
         whileTap={{ scale: 0.95 }}
         aria-label={hasError ? "通知加载失败，点击重试" : "通知"}
       >
-        <Bell className="h-5 w-5 text-[rgba(180,230,230,0.9)]" strokeWidth={2} />
+        <Bell className="h-5 w-5 text-black" strokeWidth={2} />
         {!hasError && unreadCount > 0 && (
           <span className="absolute top-0 right-0 h-4 w-4 flex items-center justify-center text-[9px] text-white bg-red-500 rounded-full">
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -167,7 +167,11 @@ const NotificationIcon: React.FC = () => {
             }}
           >
             <motion.div 
-              className="w-full bg-gray-800/75 backdrop-blur-md border border-gray-700/30 shadow-xl rounded-lg overflow-hidden"
+              className="w-full bg-white border border-gray-200 shadow-xl rounded-lg overflow-hidden"
+              variants={{
+                hidden: { opacity: 0, y: -10 },
+                show: { opacity: 1, y: 0 }
+              }}
             >
               <div className="p-2">
                 <NotificationPopover

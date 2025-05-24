@@ -22,7 +22,7 @@ const GlobalRecommendationsDisplay: React.FC<GlobalRecommendationsDisplayProps> 
           layout
         >
           <div 
-            className="recommendations-content-area bg-black/20 backdrop-blur-md rounded-lg shadow-lg"
+            className="recommendations-content-area bg-transparent rounded-lg"
                 >
             <RecommendedContentCards />
           </div>

@@ -17,9 +17,6 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-// 已移除: import Navbar from "../components/Navbar";
-import SideNavbar from '../components/SideNavbar';
-import Chatbot from '../components/Chatbot';
 import { API_BASE_URL } from '../config';
 import axios from 'axios';
 import { useSidebar } from '../contexts/SidebarContext';
@@ -120,7 +117,6 @@ const ArticleListPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string | 'all'>('all');
   const { isSidebarOpen } = useSidebar();
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   // Removed totalPages state
   
@@ -210,7 +206,7 @@ const ArticleListPage: React.FC = () => {
   const error = isArticlesError ? (articlesError?.message || '加载文章时出错') : null;
 
   return (
-    <div className="min-h-screen flex flex-col text-white">
+    <div className="min-h-screen flex flex-col text-black">
       {/* 移除Navbar组件 */}
       
       <div className="flex flex-1 overflow-hidden">
@@ -218,25 +214,16 @@ const ArticleListPage: React.FC = () => {
         
         <main className={`flex-grow overflow-y-auto transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:ml-56' : 'ml-0'}`}>
           <div className="container mx-auto px-4 pb-4 pt-4">
-            <button 
-              onClick={() => setIsChatOpen(true)}
-              className="fixed right-6 bottom-6 bg-white/10 backdrop-blur-md text-white rounded-full p-3 shadow-lg z-50 transition-colors hover:bg-white/20"
-              title="AI 聊天"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-            </button>
 
             <div className="mb-6">
               <div className="flex flex-wrap gap-2">
                 {displayCategories.map((category) => (
                   <button
                     key={category}
-                    className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                       selectedCategory === (category === '全部' ? 'all' : category) && selectedTag === 'all'
-                        ? 'bg-indigo-600 text-white shadow' 
-                        : 'bg-white/10 hover:bg-white/20 text-gray-200'
+                        ? 'bg-blue-500/90 text-white shadow-md' 
+                        : 'bg-gray-100/90 hover:bg-gray-200/90 text-gray-700 border border-gray-200/50'
                     }`}
                     onClick={() => handleCategoryChange(category === '全部' ? 'all' : category)}
                   >
@@ -251,10 +238,10 @@ const ArticleListPage: React.FC = () => {
                 <div className="mb-8 flex flex-wrap gap-2"> 
                     <button
                         onClick={() => handleTagClick('all')}
-                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${ 
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${ 
                             selectedTag === 'all'
-                            ? 'bg-teal-600 text-white shadow' 
-                            : 'bg-gray-700/60 hover:bg-gray-600/80 text-gray-300'
+                            ? 'bg-teal-500/90 text-white shadow-md' 
+                            : 'bg-gray-100/90 hover:bg-gray-200/90 text-gray-700 border border-gray-200/50'
                         }`}
                     >
                         # 所有标签
@@ -263,10 +250,10 @@ const ArticleListPage: React.FC = () => {
                         <button
                             key={tag} 
                             onClick={() => handleTagClick(tag)}
-                            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${ 
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${ 
                                 selectedTag === tag 
-                                ? 'bg-teal-600 text-white shadow' 
-                                : 'bg-gray-700/60 hover:bg-gray-600/80 text-gray-300'
+                                ? 'bg-teal-500/90 text-white shadow-md' 
+                                : 'bg-gray-100/90 hover:bg-gray-200/90 text-gray-700 border border-gray-200/50'
                             }`}
                         >
                             # {tag}
@@ -274,17 +261,17 @@ const ArticleListPage: React.FC = () => {
                     ))}
                 </div>
             )}
-            {isLoadingTags && <p className="text-sm text-gray-400 mb-4">正在加载标签...</p>}
+            {isLoadingTags && <p className="text-sm text-black mb-4">正在加载标签...</p>}
             {isTagsError && <p className="text-sm text-red-400 mb-4">加载标签失败。</p>}
             
             {/* Use isLoading for the main loading spinner */}
             {isLoading ? (
               <div className="text-center py-10">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mx-auto"></div>
-                <span className="mt-3 text-gray-200 block">正在加载文章...</span>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black mx-auto"></div>
+                <span className="mt-3 text-black block">正在加载文章...</span>
               </div>
             ) : error ? (
-              <div className="text-center py-10 bg-red-900/30 border border-red-700 text-red-300 p-4 rounded">
+              <div className="text-center py-10 bg-red-900/30 border border-red-700 text-black p-4 rounded">
                 <strong className="font-bold">加载失败!</strong>
                 <span className="block sm:inline"> {error}</span>
               </div>
@@ -309,15 +296,15 @@ const ArticleListPage: React.FC = () => {
                       )}
                       <div className="p-3 flex flex-col flex-grow">
                           <h3 
-                          className="text-base font-semibold text-gray-100 mb-1.5 line-clamp-2 group-hover:text-white"
+                          className="text-base font-semibold text-black mb-1.5 line-clamp-2 group-hover:text-black"
                             title={article.title}
                           >
                             {article.title}
                           </h3>
-                        <p className="text-xs text-gray-300 mb-3 line-clamp-3 flex-grow">
-                            {article.summary || '无摘要'}
+                        <p className={`text-xs text-black mb-3 flex-grow ${article.cover_image ? 'line-clamp-3' : 'line-clamp-6'}`}>
+                            {article.content || '无内容'}
                           </p>
-                        <div className="flex justify-between items-center text-xs text-gray-400 mt-auto pt-1.5 border-t border-gray-700/50">
+                        <div className="flex justify-between items-center text-xs text-black mt-auto pt-1.5 border-t border-gray-700/50">
                             <span>{article.author?.nickname || article.author?.email?.split('@')[0] || '匿名'}</span>
                             <div>{formatDate(article.created_at)}</div>
                         </div>
@@ -332,17 +319,17 @@ const ArticleListPage: React.FC = () => {
                     <button
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage === 1 || isFetching} // Disable during fetching
-                      className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                      className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-black rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                     >
                       上一页
                     </button>
-                    <span className="text-gray-300 text-sm">
+                    <span className="text-black text-sm">
                       第 {currentPage} / {totalPages} 页 {isFetching ? '(加载中...)' : ''}
                     </span>
                     <button
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages || isFetching} // Disable during fetching
-                      className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                      className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-black rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                     >
                       下一页
                     </button>
@@ -351,13 +338,12 @@ const ArticleListPage: React.FC = () => {
               </>
             ) : (
               // Show this message when not loading, no error, but no articles found for the filter
-              <div className="text-center py-10 text-gray-400">
+              <div className="text-center py-10 text-black">
                 <p className="text-lg">该分类/标签下暂无文章</p>
               </div>
             )}
           </div>
         </main>
-        <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
       </div>
     </div>
   );

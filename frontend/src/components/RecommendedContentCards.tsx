@@ -136,7 +136,7 @@ const RecommendedContentCards: React.FC<RecommendedContentCardsProps> = (/* { re
       {/* 关闭按钮 */}
       <button 
         onClick={() => clearAllRecommendations()} 
-        className="absolute top-0 right-3 z-20 p-1 text-white/50 hover:text-white/80 transition-colors duration-150"
+        className="absolute top-0 right-3 z-20 p-1 text-black/70 hover:text-black transition-colors duration-150"
         aria-label="关闭推荐"
         title="关闭推荐"
       >
@@ -177,14 +177,14 @@ const RecommendedContentCards: React.FC<RecommendedContentCardsProps> = (/* { re
           return (
             <motion.div
               key={`${item.type}-${item.id}-${activeRecommendationIndex}`} // Ensure key is unique across different sets
-              className={`flex-shrink-0 w-40 h-44 bg-black/25 backdrop-blur-md border border-white/10 rounded-lg shadow-lg hover:shadow-indigo-500/40 transition-all duration-200 cursor-pointer group overflow-hidden flex flex-col justify-between`}
+              className={`flex-shrink-0 w-40 h-44 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-indigo-500/40 transition-all duration-200 cursor-pointer group overflow-hidden flex flex-col justify-between`}
               onClick={() => handleCardClick(url)}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: itemIndex * 0.05, duration: 0.2 }} // Reduced delay for faster appearance
             >
               {item.type === 'article' && hasImage && (
-                <div className="w-full h-16 bg-slate-700 overflow-hidden flex items-center justify-center">
+                <div className="w-full h-16 bg-gray-100 overflow-hidden flex items-center justify-center">
                   <img 
                     src={imageUrl} 
                     alt={item.title} 
@@ -195,11 +195,11 @@ const RecommendedContentCards: React.FC<RecommendedContentCardsProps> = (/* { re
               )}
               
               <div className={`p-2 flex flex-col flex-grow ${ (item.type === 'article' && hasImage) ? 'h-[calc(100%-4rem)]' : 'h-full'}`}>
-                <h4 className="text-xs font-semibold text-white/90 group-hover:text-indigo-300 transition-colors duration-200 line-clamp-2" title={item.title}>
+                <h4 className="text-xs font-semibold text-black group-hover:text-indigo-600 transition-colors duration-200 line-clamp-2" title={item.title}>
                   {item.title}
                 </h4>
                 
-                <p className={`text-[11px] text-slate-300/80 mt-1 flex-grow ${ (item.type === 'article' && hasImage) ? 'line-clamp-2' : 'line-clamp-4'}`}>
+                <p className={`text-[11px] text-black mt-1 flex-grow ${ (item.type === 'article' && hasImage) ? 'line-clamp-2' : 'line-clamp-4'}`}>
                   {
                     sanitizeContentForPreview(
                       ('content' in item && item.content && typeof item.content === 'string' && item.content.trim() !== '')
@@ -209,7 +209,7 @@ const RecommendedContentCards: React.FC<RecommendedContentCardsProps> = (/* { re
                   }
                 </p>
 
-                <div className="flex justify-between items-center mt-auto pt-1 border-t border-white/10 text-[10px] text-slate-400/90 group-hover:text-indigo-400/80 transition-colors duration-200">
+                <div className="flex justify-between items-center mt-auto pt-1 border-t border-gray-200 text-[10px] text-gray-500 group-hover:text-indigo-600 transition-colors duration-200">
                   <div className="truncate">{item.author_nickname || '佚名'}</div>
                   <div>{formatDate(item.created_at)}</div>
                 </div>

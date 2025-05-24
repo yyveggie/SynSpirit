@@ -261,11 +261,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
               username={displayName} 
               avatar={userAvatar} 
               size="sm"
+              className="mr-3"
+              showName={false}
             />
           )}
           {!userId && (
             <div className="flex items-center">
-              <div className="w-6 h-6 rounded-full mr-2 flex items-center justify-center bg-gray-500 text-white text-xs">?</div>
+              <div className="w-6 h-6 rounded-full mr-3 flex items-center justify-center bg-gray-500 text-white text-xs">?</div>
               <span className="font-medium text-gray-300 text-sm">{displayName}</span>
             </div>
           )}

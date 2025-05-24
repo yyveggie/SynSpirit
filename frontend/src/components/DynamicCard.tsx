@@ -824,12 +824,12 @@ const DynamicCard = memo(({
       if (!title || !slug) return null;
       return (
         <div 
-          className={`mt-2 ${isCompact ? 'p-1.5' : 'p-2'} ${isCompact ? 'bg-gray-800/8 backdrop-blur-md border border-white/5' : 'bg-gray-800/20 backdrop-blur-sm'} rounded-md hover:bg-gray-700/30 cursor-pointer transition-all duration-200`} 
+          className={`mt-2 ${isCompact ? 'p-1.5' : 'p-2'} ${isCompact ? 'bg-gray-300' : 'bg-gray-300'} rounded-md hover:bg-gray-400 cursor-pointer transition-all duration-200`} 
           onClick={(e) => { e.stopPropagation(); navigate(`/article/${slug}`); }}
         >
           <div className="flex items-center">
-            <span className="text-xs text-blue-400/80 whitespace-nowrap flex-shrink-0">分享的文章{category ? `：${category}` : ''}</span>
-            <span className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold text-blue-200 ml-1 truncate`}>{title}</span>
+            <span className="text-xs text-blue-700 whitespace-nowrap flex-shrink-0">分享的文章{category ? `：${category}` : ''}</span>
+            <span className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold text-blue-900 ml-1 truncate`}>{title}</span>
           </div>
         </div>
       );
@@ -841,12 +841,12 @@ const DynamicCard = memo(({
       if (!title || !slug) return null;
       return (
         <div 
-          className={`mt-2 ${isCompact ? 'p-1.5' : 'p-2'} ${isCompact ? 'bg-gray-800/8 backdrop-blur-md border border-white/5' : 'bg-gray-800/20 backdrop-blur-sm'} rounded-md hover:bg-gray-700/30 cursor-pointer transition-all duration-200`} 
+          className={`mt-2 ${isCompact ? 'p-1.5' : 'p-2'} ${isCompact ? 'bg-gray-300' : 'bg-gray-300'} rounded-md hover:bg-gray-400 cursor-pointer transition-all duration-200`} 
           onClick={(e) => { e.stopPropagation(); navigate(`/posts/${slug}`); }}
         >
           <div className="flex items-center">
-            <span className="text-xs text-green-400/80 whitespace-nowrap flex-shrink-0">分享的帖子{topic ? `：${topic}` : ''}</span>
-            <span className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold text-green-200 ml-1 truncate`}>{title}</span>
+            <span className="text-xs text-green-700 whitespace-nowrap flex-shrink-0">分享的帖子{topic ? `：${topic}` : ''}</span>
+            <span className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold text-green-900 ml-1 truncate`}>{title}</span>
           </div>
         </div>
       );
@@ -858,12 +858,12 @@ const DynamicCard = memo(({
       if (!title || !slug) return null;
       return (
         <div 
-          className={`mt-2 ${isCompact ? 'p-1.5' : 'p-2'} ${isCompact ? 'bg-gray-800/8 backdrop-blur-md border border-white/5' : 'bg-gray-800/20 backdrop-blur-sm'} rounded-md hover:bg-gray-700/30 cursor-pointer transition-all duration-200`} 
+          className={`mt-2 ${isCompact ? 'p-1.5' : 'p-2'} ${isCompact ? 'bg-gray-300' : 'bg-gray-300'} rounded-md hover:bg-gray-400 cursor-pointer transition-all duration-200`} 
           onClick={(e) => { e.stopPropagation(); navigate(`/tools/${slug}`); }}
         >
           <div className="flex items-center">
-            <span className="text-xs text-purple-400/80 whitespace-nowrap flex-shrink-0">分享的工具{category ? `：${category}` : ''}</span>
-            <span className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold text-purple-200 ml-1 truncate`}>{title}</span>
+            <span className="text-xs text-purple-700 whitespace-nowrap flex-shrink-0">分享的工具{category ? `：${category}` : ''}</span>
+            <span className={`${isCompact ? 'text-xs' : 'text-sm'} font-semibold text-purple-900 ml-1 truncate`}>{title}</span>
           </div>
         </div>
       );
@@ -955,10 +955,10 @@ const DynamicCard = memo(({
       className={`
         w-full
         group transition-all duration-300 ease-in-out 
-         hover:brightness-110
+        hover:brightness-110
         ${variant === 'sidebar' 
-          ? 'bg-gradient-to-br from-gray-700/8 via-gray-750/10 to-gray-800/12 backdrop-blur-xl border border-white/5' 
-          : 'bg-gradient-to-br from-gray-700/40 via-gray-750/50 to-gray-800/60 backdrop-blur-lg'
+          ? 'bg-gray-100' 
+          : 'bg-gray-100'
         }
         rounded-xl mb-4 overflow-hidden 
         ${variant === 'sidebar' ? 'p-3 text-sm cursor-pointer' : (variant === 'timeline' ? 'p-4' : 'p-4')}
@@ -966,7 +966,7 @@ const DynamicCard = memo(({
         ${className || ''}
       `}
       style={{
-        boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)',
+        boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.1)',
         transform: 'scale(1)',
         zIndex: isSelected && variant === 'sidebar' ? 10 : 1, 
         transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease-out',
@@ -974,12 +974,12 @@ const DynamicCard = memo(({
       onMouseEnter={(e) => {
         const el = e.currentTarget;
         el.style.transform = 'translateY(-6px) scale(1.01)';
-        el.style.boxShadow = '0 15px 25px rgba(0, 0, 0, 0.3)';
+        el.style.boxShadow = '0 8px 15px rgba(0, 0, 0, 0.1)';
       }}
       onMouseLeave={(e) => {
         const el = e.currentTarget;
         el.style.transform = 'scale(1)';
-        el.style.boxShadow = '0px 4px 8px rgba(0, 0, 0, 0.3)';
+        el.style.boxShadow = '0px 2px 6px rgba(0, 0, 0, 0.1)';
       }}
     >
       {/* Right side indicator bar */}
@@ -990,7 +990,7 @@ const DynamicCard = memo(({
         ></div>
       )}
 
-      <div className="flex items-center justify-between pt-3">
+      <div className="flex items-center justify-between pt-0">
         <div className="flex items-center">
           {authorId ? (
             <Link
@@ -998,7 +998,7 @@ const DynamicCard = memo(({
               onClick={(e) => e.stopPropagation()}
               target="_blank"
               rel="noopener noreferrer"
-              // className="flex-shrink-0" // Optional: if you need to apply flex-shrink to the Link itself
+              className="flex-shrink-0" 
             >
           <UserAvatarWithImage
             userId={authorId}
@@ -1015,7 +1015,7 @@ const DynamicCard = memo(({
               size={variant === 'sidebar' ? 'sm' : 'md'} 
             />
           )}
-          <div className="ml-2">
+          <div className="ml-3 flex flex-col justify-center">
             {authorId ? (
               <Link 
                 to={`/profile/${authorId}`} 
@@ -1035,7 +1035,7 @@ const DynamicCard = memo(({
         </div>
         
         <div className="flex items-center space-x-2">
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-black">
             {formatDate(createdAt)}
           </span>
           {variant === 'main' && currentUser && currentUser.id === authorId && !isContentEffectivelyDeleted && (
@@ -1053,10 +1053,10 @@ const DynamicCard = memo(({
         </div>
       </div>
 
-      <div className={`w-full mt-1 ${variant === 'sidebar' ? 'text-xs' : 'text-sm'} text-gray-200 space-y-2 break-words`}>
+      <div className={`w-full mt-1 ${variant === 'sidebar' ? 'text-xs' : 'text-sm'} text-gray-900 space-y-2 break-words`}>
         {/* 始终显示分享者自己的评论 (如果有) */}
         {dynamicContentFromData && (
-          <div className="prose prose-invert prose-sm max-w-none text-gray-200 link:text-blue-400">
+          <div className="prose prose-invert prose-sm max-w-none text-gray-900 link:text-blue-600">
              <TextWithLinks text={dynamicContentFromData} />
           </div>
          )}
@@ -1084,8 +1084,8 @@ const DynamicCard = memo(({
           
         {!dynamic.is_repost && ( // 如果是直接分享 (不是转发)
           isContentEffectivelyDeleted ? ( // 检查直接分享的目标是否已删除
-            <div className={`p-2 ${variant === 'sidebar' ? 'bg-gray-800/8 backdrop-blur-md border border-white/5' : 'bg-gray-800/20'} rounded-md`}>
-              <p className="text-xs text-amber-400 italic">{deletedMessage}</p>
+            <div className={`p-2 ${variant === 'sidebar' ? 'bg-gray-300' : 'bg-gray-300'} rounded-md`}>
+              <p className="text-xs text-red-400 font-normal">{deletedMessage}</p>
             </div>
           ) : (
             // 目标内容未删除，正常渲染 renderTarget (文章/帖子/工具卡片)
@@ -1096,67 +1096,71 @@ const DynamicCard = memo(({
       </div>
 
       {(variant === 'main' || variant === 'timeline') && (
-        <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-700/50">
-          <div className="flex space-x-3 text-gray-400">
+        <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-300">
+          <div className="flex space-x-3 text-gray-500">
             {/* 点赞按钮 - New Order: 1st */}
-            <button
-              className={`flex items-center gap-1 transition ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-              onClick={handleLikeToggle}
-              disabled={isSubmitting}
-              aria-label={isLiked ? '取消点赞' : '点赞'}
-            >
-              {isLiked ? <FaHeart className="text-sm" /> : <FaRegHeart className="text-sm" />}
-              <span 
-                className="text-sm tabular-nums"
-                style={{ visibility: likeCount > 0 ? 'visible' : 'hidden' }}
+            <div className="w-16 flex items-center">
+              <button
+                className={`flex items-center gap-1 transition ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                onClick={handleLikeToggle}
+                disabled={isSubmitting}
+                aria-label={isLiked ? '取消点赞' : '点赞'}
               >
-                {likeCount > 0 ? likeCount : '0'}
-              </span>
-            </button>
+                {isLiked ? <FaHeart className="text-sm" /> : <FaRegHeart className="text-sm" />}
+                <span 
+                  className="text-sm tabular-nums min-w-[18px] text-right"
+                >
+                  {likeCount > 0 ? likeCount : ''}
+                </span>
+              </button>
+            </div>
 
             {/* 收藏按钮 - New Order: 2nd */}
-            <button
-              className={`flex items-center gap-1 transition ${isCollected ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}`}
-              onClick={handleCollectToggle}
-              disabled={isSubmitting}
-              aria-label={isCollected ? '取消收藏' : '收藏'}
-            >
-              {isCollected ? <FaBookmark className="text-sm" /> : <FaRegBookmark className="text-sm" />}
-              <span 
-                className="text-sm tabular-nums"
-                style={{ visibility: collectCount > 0 ? 'visible' : 'hidden' }}
+            <div className="w-16 flex items-center">
+              <button
+                className={`flex items-center gap-1 transition ${isCollected ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}`}
+                onClick={handleCollectToggle}
+                disabled={isSubmitting}
+                aria-label={isCollected ? '取消收藏' : '收藏'}
               >
-                {collectCount > 0 ? collectCount : '0'}
-              </span>
-            </button>
+                {isCollected ? <FaBookmark className="text-sm" /> : <FaRegBookmark className="text-sm" />}
+                <span 
+                  className="text-sm tabular-nums min-w-[18px] text-right"
+                >
+                  {collectCount > 0 ? collectCount : ''}
+                </span>
+              </button>
+            </div>
 
             {/* 分享按钮 - New Order: 3rd */}
-            <button
-              onClick={(e) => { e.stopPropagation(); handleShare(); }}
-              className="flex items-center gap-1 hover:text-green-400 transition-colors duration-150"
-              aria-label="分享"
-            >
-              <IoShareSocialOutline className="text-sm" />
-              <span 
-                className="text-sm tabular-nums"
-                style={{ visibility: (dynamic.repost_count || 0) > 0 ? 'visible' : 'hidden' }}
+            <div className="w-16 flex items-center">
+              <button
+                onClick={(e) => { e.stopPropagation(); handleShare(); }}
+                className="flex items-center gap-1 hover:text-green-400 transition-colors duration-150"
+                aria-label="分享"
               >
-                {(dynamic.repost_count || 0) > 0 ? (dynamic.repost_count || 0) : '0'}
-              </span>
-            </button>
+                <IoShareSocialOutline className="text-sm" />
+                <span 
+                  className="text-sm tabular-nums min-w-[18px] text-right"
+                >
+                  {(dynamic.repost_count || 0) > 0 ? (dynamic.repost_count || 0) : ''}
+                </span>
+              </button>
+            </div>
 
             {/* 评论按钮 - New Order: 4th */}
-            <div
-              className={`flex items-center gap-1 text-gray-400`}
-              aria-label="评论数"
-            >
-              <FaRegComment className="text-sm" />
-              <span 
-                className="text-sm tabular-nums"
-                style={{ visibility: (dynamic.comment_count || 0) > 0 ? 'visible' : 'hidden' }}
+            <div className="w-16 flex items-center">
+              <div
+                className={`flex items-center gap-1 text-gray-400`}
+                aria-label="评论数"
               >
-                {(dynamic.comment_count || 0) > 0 ? (dynamic.comment_count || 0) : '0'}
-              </span>
+                <FaRegComment className="text-sm" />
+                <span 
+                  className="text-sm tabular-nums min-w-[18px] text-right"
+                >
+                  {(dynamic.comment_count || 0) > 0 ? (dynamic.comment_count || 0) : ''}
+                </span>
+              </div>
             </div>
           </div>
         </div>

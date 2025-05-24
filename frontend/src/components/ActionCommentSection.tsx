@@ -178,21 +178,21 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
         >
             {/* 移除连接线 div */} 
             <div style={indentStyle} className="comment-content-wrapper">
-                <div className="flex items-center space-x-2 mb-1">
-                    <UserAvatar userId={userIdForAvatar} username={displayName} avatar={userAvatar} size="sm" showName={false}/>
-                    <span className={`text-sm font-medium ${isAIReply ? 'text-purple-400' : (comment.user ? 'text-gray-100' : 'text-gray-400')}`}>
+                <div className="flex items-center mb-1">
+                    <UserAvatar userId={userIdForAvatar} username={displayName} avatar={userAvatar} size="sm" showName={false} className="mr-3"/>
+                    <span className={`text-sm font-medium ${isAIReply ? 'text-purple-700' : (comment.user ? 'text-gray-900' : 'text-gray-500')}`}>
                         {displayName}
                     </span>
-                    <span className="text-gray-400 text-xs pt-0.5 ml-auto">{formatCommentDate(comment.created_at)}</span>
+                    <span className="text-gray-500 text-xs pt-0.5 ml-auto">{formatCommentDate(comment.created_at)}</span>
                 </div>
                 <div className={`pl-8 ${hasReplies && isCollapsed ? 'pb-0' : (depth > 0 ? 'pb-1' : 'pb-1') }`}>
-                    <p className={`text-sm whitespace-pre-wrap break-words mb-1.5 ${comment.is_deleted ? 'text-gray-500 italic' : (isAIReply ? 'text-purple-50' : 'text-gray-100')}`}>{comment.content}</p>
+                    <p className={`text-sm whitespace-pre-wrap break-words mb-1.5 ${comment.is_deleted ? 'text-gray-500 italic' : (isAIReply ? 'text-purple-800' : 'text-gray-900')}`}>{comment.content}</p>
                     {!comment.is_deleted && (
                         <div className="flex items-center space-x-3 text-xs mt-1">
                             {hasReplies && (
                                 <button 
                                     onClick={() => setIsCollapsed(!isCollapsed)} 
-                                    className="text-xs text-blue-400 hover:text-blue-300 focus:outline-none min-w-[36px] text-left"
+                                    className="text-xs text-blue-600 hover:text-blue-800 focus:outline-none min-w-[36px] text-left"
                                 >
                                     {isCollapsed ? `[+${totalRepliesCount}]` : '[-]'}
                                 </button>
@@ -206,7 +206,7 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
                                         setReplyToCommentId(comment.id);
                                     }
                                 }} 
-                                className="flex items-center text-gray-400 hover:text-blue-400 p-0.5 rounded"
+                                className="flex items-center text-gray-500 hover:text-blue-600 p-0.5 rounded"
                             >
                                 <BsArrowReturnRight />
                             </button>
@@ -241,7 +241,7 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
                                 }} 
                                 placeholder={`回复 ${displayName}...`} 
                                 rows={2} 
-                                className="w-full px-2 py-1.5 text-sm rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none bg-black/10 backdrop-blur-md text-gray-100 placeholder-gray-400"
+                                className="w-full px-2 py-1.5 text-sm rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none bg-gray-100 text-gray-900 placeholder-gray-500"
                                 autoFocus={isReplying} // 仅在回复时自动聚焦
                                 tabIndex={isReplying ? 0 : -1} // 控制可访问性
                             />
@@ -251,7 +251,7 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
                                     if (isReplying) await handleReplySubmit(comment.id); 
                                 }} 
                                 disabled={!replyContent.trim() || submittingReply} 
-                                className={`absolute bottom-2 right-2 p-1 rounded-md ${!replyContent.trim() || submittingReply ? 'text-gray-500 cursor-not-allowed' : 'text-blue-400 hover:text-blue-300'}`}
+                                className={`absolute bottom-2 right-2 p-1 rounded-md ${!replyContent.trim() || submittingReply ? 'text-gray-500 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'}`}
                                 tabIndex={isReplying ? 0 : -1} // 控制可访问性
                             >
                                 {submittingReply ? <FaSpinner className="animate-spin h-4 w-4" /> : <BsArrowReturnRight className="h-4 w-4" />}
@@ -502,6 +502,8 @@ const ActionCommentSection: React.FC<ActionCommentSectionProps> = memo(({ action
         }
     }, [setReplyToCommentId, setForceExpandCommentId]);
 
+    const commentSectionClass = `border-0 bg-white ${isCommentBoxFocused ? 'focus-within:border-blue-400' : ''} transition-all`;
+
     return (
         <div 
             className={`action-comment-section ${wrapperClassName || ''}`} 
@@ -518,9 +520,9 @@ const ActionCommentSection: React.FC<ActionCommentSectionProps> = memo(({ action
                             onChange={handleNewCommentChange}
                             onFocus={handleCommentInputFocus}
                             onBlur={handleCommentInputBlur}
-                            className={`w-full px-3 py-2 pb-10 bg-black/10 backdrop-blur-md rounded-lg 
-                                focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-100 text-sm 
-                                border border-gray-700/50 transition-all duration-300 ease-in-out 
+                            className={`w-full px-3 py-2 pb-10 bg-gray-100 rounded-lg 
+                                focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 text-sm 
+                                transition-all duration-300 ease-in-out 
                                 overflow-y-auto resize-none 
                                 ${isCommentBoxFocused || newComment.trim() ? 'h-20' : 'h-12'}`}
                             placeholder="添加评论..."
@@ -537,7 +539,7 @@ const ActionCommentSection: React.FC<ActionCommentSectionProps> = memo(({ action
                             <button 
                                 onClick={handleSubmitComment} 
                                 disabled={submitCommentMutation.isPending || !newComment.trim()}
-                                className="absolute bottom-2 right-2 z-20 p-1.5 text-blue-400 hover:text-blue-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors duration-150 rounded-md hover:bg-gray-700/50 active:bg-gray-600/40 focus:outline-none"
+                                className="absolute bottom-2 right-2 z-20 p-1.5 text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors duration-150 rounded-md hover:bg-gray-200 active:bg-gray-300 focus:outline-none"
                                 title="发送 (Cmd/Ctrl+Enter)"
                             >
                                 {submitCommentMutation.isPending ? (
@@ -550,31 +552,34 @@ const ActionCommentSection: React.FC<ActionCommentSectionProps> = memo(({ action
                     </div>
 
                     {/* 右侧按钮组：最新、热门、刷新 (Flex 容器) */}
-                    <div className="flex items-center space-x-1.5 flex-shrink-0"> {/* 使用 space-x-1.5 或 space-x-2 调整按钮间距 */}
+                    <div className="flex space-x-1 flex-shrink-0">
                         <button
                             onClick={() => handleSortChange('latest')}
-                            className={`px-3 py-1.5 rounded-full border transition-colors text-xs font-medium ${ 
+                            className={`p-1.5 px-2 rounded-full text-xs transition-colors duration-150 ${
                                 sortBy === 'latest' 
-                                    ? 'bg-gray-700/60 border-gray-500 text-gray-200' 
-                                    : 'bg-transparent border-gray-600 text-gray-400 hover:border-gray-400 hover:text-gray-300'
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
+                            title="按最新排序"
                         >
                             最新
                         </button>
                         <button
                             onClick={() => handleSortChange('popular')}
-                            className={`px-3 py-1.5 rounded-full border transition-colors text-xs font-medium ${ 
+                            className={`p-1.5 px-2 rounded-full text-xs transition-colors duration-150 ${
                                 sortBy === 'popular' 
-                                    ? 'bg-gray-700/60 border-gray-500 text-gray-200' 
-                                    : 'bg-transparent border-gray-600 text-gray-400 hover:border-gray-400 hover:text-gray-300'
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                             }`}
+                            title="按热门排序"
                         >
                             热门
                         </button>
+                        
                         <button
                             onClick={handleRefreshComments}
                             disabled={loadingComments}
-                            className="p-1.5 text-gray-400 hover:text-blue-300 active:text-blue-500 transition-colors duration-150 rounded-full hover:bg-gray-700/40 active:bg-gray-600/40 focus:outline-none"
+                            className="p-1.5 text-gray-700 hover:text-blue-600 active:text-blue-700 transition-colors duration-150 rounded-full hover:bg-gray-200 active:bg-gray-300 focus:outline-none"
                             title="刷新评论"
                         >
                             {loadingComments ? (

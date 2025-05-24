@@ -2,6 +2,7 @@
 """
 定义文章模型 (Article)。
 用于存储用户发布的文章，包含标题、内容、摘要、分类、标签、作者、封面图、向量嵌入、阅读量、系列信息等。
+支持软删除功能，通过is_deleted字段标记删除状态。
 
 注意: 如果新增、删除或修改功能，必须在这开头的注释中同步修改，如发现功能与注释描述不同，也可以在确定后修改。
 """
@@ -38,6 +39,8 @@ class Article(db.Model):
     answers_count = db.Column(db.Integer, default=0, index=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # 软删除标志，默认为False表示未删除
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
     
     # Add series fields
     series_name = db.Column(db.String(200), nullable=True, index=True)
@@ -110,7 +113,8 @@ class Article(db.Model):
             'created_at': self.created_at.isoformat() + 'Z', # Add Z for UTC indication
             'updated_at': self.updated_at.isoformat() + 'Z', # Add Z for UTC indication
             'series_name': self.series_name,
-            'series_order': self.series_order
+            'series_order': self.series_order,
+            'is_deleted': self.is_deleted
         }
         
         if include_content:

@@ -3,19 +3,18 @@
 
 /* 立即应用背景色的关键代码 */
 :root {
-  /* 强制使用深色方案，确保所有浏览器实例共享相同的方案 */
-  color-scheme: dark;
+  /* 改为浅色方案 */
+  color-scheme: light;
   
-  /* 全局背景颜色变量 - 集中定义所有背景相关样式 */
-  --bg-base-color: #437a7a;
+  /* 全局背景颜色变量 - 修改为白色 */
+  --bg-base-color: #ffffff;
 }
 
-/* 立即设置HTML和body的背景色和颜色 - 保留主要背景设置 */
+/* 立即设置HTML和body的背景色和颜色 - 修改为白色背景和黑色文字 */
 html {
   background-color: var(--bg-base-color) !important;
-  background-image: -webkit-linear-gradient(45deg, #437a7a, #632147) !important;
-  background-image: linear-gradient(45deg, #437a7a, #632147) !important;
-  color: white;
+  background-image: none !important; /* 移除渐变背景 */
+  color: #000000; /* 黑色文字 */
   height: 100%;
   min-height: 100%;
   margin: 0;
@@ -23,7 +22,7 @@ html {
 }
 
 body {
-  color: white;
+  color: #000000; /* 黑色文字 */
   height: 100%;
   min-height: 100%;
   margin: 0;
@@ -834,7 +833,7 @@ html, body {
 #modal-root .modal-wrapper {
   /* 移除之前的固定宽度和内边距，让内容决定宽度 */
   /* width: 100%; */
-  /* max-width: 42rem; */ 
+  /* max-width: 42rem;  */
   /* padding: 0; */
 }
 
