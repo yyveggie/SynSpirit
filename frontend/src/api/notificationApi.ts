@@ -46,13 +46,9 @@ apiClient.interceptors.request.use(config => {
   // 每次请求时动态获取最新的token，而不是使用缓存
   const token = localStorage.getItem('token');
   
-  // 调试输出
-  console.log('[通知API] 发送请求, token状态:', token ? '有效' : '无效');
-  
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   } else {
-    console.warn('[通知API] 没有找到有效的授权token');
   }
   return config;
 });
@@ -73,7 +69,6 @@ export const fetchNotifications = async (
     });
     return response.data;
   } catch (error) {
-    console.error('获取通知失败:', error);
     throw error;
   }
 };
@@ -83,7 +78,6 @@ export const markNotificationAsRead = async (notificationId: number): Promise<vo
   try {
     await apiClient.put(`/api/notifications/${notificationId}/read`, {});
   } catch (error) {
-    console.error('标记通知已读失败:', error);
     throw error;
   }
 };
@@ -93,7 +87,6 @@ export const markAllNotificationsAsRead = async (): Promise<void> => {
   try {
     await apiClient.post('/api/notifications/mark-all-read', {});
   } catch (error) {
-    console.error('标记所有通知已读失败:', error);
     throw error;
   }
 };
@@ -104,7 +97,6 @@ export const fetchUnreadNotificationCount = async (): Promise<number> => {
     const response = await apiClient.get('/api/notifications/unread-count');
     return response.data.unread_count;
   } catch (error) {
-    console.error('获取未读通知数量失败:', error);
     return 0; // 出错时返回0，避免UI崩溃
   }
 }; 

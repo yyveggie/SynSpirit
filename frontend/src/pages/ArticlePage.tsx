@@ -668,8 +668,8 @@ const ArticlePage: React.FC = () => {
       transition={{ duration: 0.4, delay: 0.1 }} 
     >
       {/* 移除左侧偏移，使用固定宽度和水平居中实现整体居中布局 */}
-      <main className="flex-1 transition-all duration-300 ease-in-out overflow-y-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        <div className="max-w-4xl mx-auto">
+      <main className="flex-1 transition-all duration-300 ease-in-out overflow-y-auto px-5 sm:px-8 lg:px-12 py-10 w-full">
+        <div className="max-w-2xl mx-auto">
           {/* 文章封面 - 移到标题之前 */}
           {article.cover_image && (
             <div className="mb-8 aspect-video overflow-hidden rounded-lg shadow-2xl bg-gray-800">
@@ -683,9 +683,9 @@ const ArticlePage: React.FC = () => {
           )}
 
           {/* 文章头部信息 */}
-          <header className="mb-8">
+          <header className="mb-10">
             {/* 标题单独一行 - 更新字体大小 */}
-            <div className="mb-4">
+            <div className="mb-6">
               <h1 className="text-3xl md:text-4xl font-bold text-black break-words"> {/* 更改为黑色标题 */}
                 {article.title}
               </h1>
@@ -693,7 +693,7 @@ const ArticlePage: React.FC = () => {
             
             {/* 作者信息、阅读量、标签、按钮在同一行，两端对齐 */}
             <div className="flex flex-wrap justify-between items-center text-sm text-gray-600 gap-x-4 gap-y-2">
-              {/* 左侧：作者信息、发布日期、阅读量 - 更新样式和结构 */}
+              {/* 左侧：作者信息、发布日期、阅读量、标签（移到这里）- 更新样式和结构 */}
               <div className="flex items-center flex-wrap gap-x-3 gap-y-1"> {/* Reduced gap-x to 3 */}
                 {/* 作者头像和名字 - 使用 AuthorTooltip 包裹 */}
                 <div 
@@ -732,32 +732,38 @@ const ArticlePage: React.FC = () => {
                     </span>
                   )}
                 </div>
-                {/* 分隔点 */}
-                <span className="hidden sm:inline text-gray-500">•</span> {/* Added separator */}
+                
+                {/* 分隔线 */}
+                <span className="hidden sm:inline text-gray-500">|</span> {/* 更改为竖线分隔符 */}
+                
                 {/* 发布日期 */}
                 <span>{formatDate(article.created_at)}</span>
-                {/* 分隔点和阅读量 */}
+                
+                {/* 分隔线和阅读量 */}
                 {article.view_count !== undefined && (
                   <>
-                    <span className="hidden sm:inline text-gray-500">•</span> {/* Added separator */}
+                    <span className="hidden sm:inline text-gray-500">|</span> {/* 更改为竖线分隔符 */}
                     <span>阅读量: {article.view_count}</span>
+                  </>
+                )}
+                
+                {/* 标签（从右侧移到这里） */}
+                {article.tags && article.tags.length > 0 && (
+                  <>
+                    <span className="hidden sm:inline text-gray-500">|</span> {/* 添加竖线分隔符 */}
+                    <div className="flex flex-wrap gap-2">
+                      {article.tags.map(tag => (
+                        <span key={tag} className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600 text-xs font-semibold">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </>
                 )}
               </div>
 
-              {/* 右侧：标签和按钮 */}
+              {/* 右侧：只保留编辑和删除按钮 */}
               <div className="flex items-center space-x-4 flex-shrink-0">
-                {/* 标签 */}
-                {article.tags && article.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {article.tags.map(tag => (
-                      <span key={tag} className="bg-indigo-600 text-white text-xs font-medium px-2.5 py-1 rounded-full">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                
                 {/* 编辑和删除按钮 */}
                 {canShowButtons && (
                   <div className="flex items-center space-x-2 flex-shrink-0">
@@ -795,22 +801,24 @@ const ArticlePage: React.FC = () => {
           {/* 文章内容 */}
           <div 
             ref={contentRef} 
-            className="prose prose-lg max-w-none article-content-actual mt-8 text-black 
-                       prose-headings:text-black prose-headings:font-semibold 
+            className="prose prose-lg max-w-none article-content-actual mt-10 text-black 
+                       prose-headings:text-black prose-headings:font-semibold prose-headings:mb-6 prose-headings:mt-10
+                       prose-p:mb-6 prose-p:leading-loose
                        prose-a:text-blue-600 hover:prose-a:text-blue-800 
                        prose-strong:text-black prose-code:text-pink-600 prose-code:bg-gray-100 prose-code:p-1 prose-code:rounded
-                       prose-blockquote:border-l-blue-500 prose-blockquote:text-gray-700 prose-blockquote:not-italic
-                       prose-img:rounded-md prose-img:shadow-lg prose-img:max-w-full prose-img:mx-auto
+                       prose-blockquote:border-l-blue-500 prose-blockquote:text-gray-700 prose-blockquote:not-italic prose-blockquote:my-8
+                       prose-img:rounded-md prose-img:shadow-lg prose-img:max-w-full prose-img:mx-auto prose-img:my-8
                        prose-table:border-gray-300 prose-th:bg-gray-100 prose-th:text-black prose-td:border-gray-300
-                       prose-ul:list-disc prose-ul:ml-5 prose-ol:list-decimal prose-ol:ml-5
-                       leading-relaxed"
+                       prose-ul:list-disc prose-ul:ml-5 prose-ul:my-6 prose-ol:list-decimal prose-ol:ml-5 prose-ol:my-6
+                       prose-li:mb-2 prose-li:leading-loose
+                       leading-loose"
             dangerouslySetInnerHTML={{ __html: processContentForVideos(article.content) }} 
           />
 
           {/* 系列文章导航 */}
           {article.series_articles && article.series_articles.length > 0 && (
-             <div className="mb-8 p-4 bg-gray-100/90 border border-gray-300/50 rounded-lg backdrop-blur-sm shadow-md"> {/* 更新背景样式 */}
-               <h3 className="text-lg font-semibold mb-3 text-black">
+             <div className="my-12 p-6 bg-gray-100/90 border border-gray-300/50 rounded-lg backdrop-blur-sm shadow-md"> {/* 更新背景样式 */}
+               <h3 className="text-lg font-semibold mb-4 text-black">
                  系列: {article.series_name || '未命名系列'}
                </h3>
                {visibleSeriesStart > 0 && (
@@ -821,12 +829,12 @@ const ArticlePage: React.FC = () => {
                    ↑ 显示更早
                  </button>
                )}
-               <ul className="space-y-1.5"> {/* Increased spacing */}
+               <ul className="space-y-3"> {/* 将系列文章的间距从1.5扩大到3 */}
                  {article.series_articles?.slice(visibleSeriesStart, visibleSeriesEnd + 1).map((seriesArticle, index) => (
-                   <li key={seriesArticle.id} className={`text-sm transition-colors duration-150 ${seriesArticle.is_current ? 'font-semibold text-black bg-gray-200/80 rounded px-2 py-0.5' : 'text-gray-700 hover:text-black'}`}>
+                   <li key={seriesArticle.id} className={`text-sm transition-colors duration-150 ${seriesArticle.is_current ? 'font-medium text-blue-700 bg-blue-50 border border-blue-100 rounded px-3 py-1.5' : 'text-gray-700 hover:text-black'}`}>
                      <Link
                        to={`/article/${seriesArticle.slug}`}
-                       className="hover:underline flex items-center"
+                       className="hover:underline flex items-center py-1"
                        title={seriesArticle.title}
                      >
                        <span className="mr-2 w-4 text-right">{seriesArticle.series_order}.</span>
@@ -847,7 +855,7 @@ const ArticlePage: React.FC = () => {
            )}
 
           {/* Comment Section */}
-          <div className="mt-12"> {/* Increased margin */}
+          <div className="mt-16"> {/* 增加评论区上方边距从12到16 */}
             <CommentSection
               targetType="article"
               targetId={article.id}

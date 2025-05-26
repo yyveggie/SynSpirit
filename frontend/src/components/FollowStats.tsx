@@ -194,10 +194,10 @@ const FollowStats: React.FC<FollowStatsProps> = ({ targetUserId, isOwnProfile })
         disabled={isLoading || numberToShow === 0} // 加载中或数量为0时不可点击
         title={isLoading ? '加载中' : (numberToShow > 0 ? `查看${label}列表` : `暂无${label}`)}
       >
-        <span className={`block text-base font-semibold text-white group-hover:text-indigo-300 transition-colors ${isLoading || numberToShow === 0 ? 'text-gray-500 group-hover:text-gray-500' : ''}`}>
+        <span className={`block text-base font-semibold text-black group-hover:text-indigo-600 transition-colors ${isLoading || numberToShow === 0 ? 'text-gray-500 group-hover:text-gray-500' : ''}`}>
           {isLoading ? '...' : numberToShow}
         </span>
-        <span className={`block text-xs group-hover:text-gray-200 transition-colors ${isLoading || numberToShow === 0 ? 'text-gray-600 group-hover:text-gray-600' : 'text-gray-400'}`}>
+        <span className={`block text-xs group-hover:text-gray-700 transition-colors ${isLoading || numberToShow === 0 ? 'text-gray-600 group-hover:text-gray-600' : 'text-black'}`}>
           {label}
         </span>
       </button>
@@ -207,12 +207,12 @@ const FollowStats: React.FC<FollowStatsProps> = ({ targetUserId, isOwnProfile })
   return (
     <>
       {/* 关注/粉丝显示区域 */} 
-      <div className="mt-4 flex items-center justify-center space-x-4 p-2">
+      <div className="mt-2 flex items-center justify-center space-x-3 py-1">
         {/* 关注数 - 可点击 */}
         {renderCount(followingCount, '关注', openFollowingList)}
 
         {/* 分隔线 */}
-        <div className="h-6 w-px bg-gray-500/40"></div>
+        <div className="h-5 w-px bg-gray-400"></div>
 
         {/* 粉丝数 - 可点击 */}
         {renderCount(followerCount, '粉丝', openFollowersList)}
@@ -220,7 +220,7 @@ const FollowStats: React.FC<FollowStatsProps> = ({ targetUserId, isOwnProfile })
         {/* 关注/取消关注按钮 */}
         {!isOwnProfile && currentUser && (
           <>
-            <div className="h-6 w-px bg-gray-500/40"></div>
+            <div className="h-5 w-px bg-gray-400"></div>
             <button
               onClick={isFollowing ? handleUnfollow : handleFollow}
               disabled={isLoadingStatus || isProcessingFollow}

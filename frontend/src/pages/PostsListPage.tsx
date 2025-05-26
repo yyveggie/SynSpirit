@@ -85,7 +85,7 @@ const PostsListPage: React.FC = () => {
   }, []);
 
   return (
-    <div className={`min-h-screen flex flex-col text-white`}>
+    <div className={`min-h-screen flex flex-col text-black bg-white`}>
       {/* 移除Navbar组件 */}
       <div className="flex flex-1 overflow-hidden pt-16">
         {/* 移除SideNavbar组件 */}
@@ -95,18 +95,18 @@ const PostsListPage: React.FC = () => {
           <div className="max-w-3xl mx-auto">
               {loading && (
                 <div className="flex justify-center items-center py-10">
-                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-gray-700"></div>
                 </div>
               )}
     
               {error && (
-                <div className="border border-red-600 text-red-200 p-4 rounded-lg text-center">
+                <div className="border border-red-400 bg-red-100 text-red-700 p-4 rounded-lg text-center">
                   {error}
                 </div>
               )}
     
               {!loading && !error && posts.length === 0 && (
-                <div className="text-center py-10 text-gray-400">
+                <div className="text-center py-10 text-gray-500">
                   <p>还没有帖子发布。</p>
                 </div>
               )}

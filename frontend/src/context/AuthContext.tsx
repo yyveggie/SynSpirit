@@ -64,11 +64,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         value = localStorage.getItem(key);
         if (value === "undefined") {
-          console.warn(`[AuthContext] localStorage中的${key}值为"undefined"字符串，视为无效`);
           value = null;
         }
       } catch (error) {
-        console.error(`[AuthContext] 读取localStorage[${key}]失败，尝试第${attempt+1}次`, error);
       }
       attempt++;
     }
@@ -86,7 +84,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       return true;
     } catch (error) {
-      console.error(`[AuthContext] 写入localStorage[${key}]失败`, error);
       return false;
     }
   };
@@ -106,7 +103,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const storedToken = getFromLocalStorage('token');
         const storedUser = getFromLocalStorage('authUser');
         
-        console.log("[AuthContext] 初始化认证状态:", { token: storedToken ? "有token" : "无token" });
         
         // 确保token不是字符串"undefined"且不为null
         if (storedToken && storedUser) {
@@ -116,9 +112,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
             setIsAuthenticated(true);
-            console.log("[AuthContext] 从localStorage恢复用户登录状态:", parsedUser.email);
           } catch (parseError) {
-            console.error("[AuthContext] 用户数据解析错误，自动登出", parseError);
             setToLocalStorage('token', null);
             setToLocalStorage('authUser', null);
             stableTokenRef.current = null;
@@ -129,12 +123,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
           // 如果token是undefined字符串或null，清除localStorage并尝试cookie认证
           if (storedToken === "undefined" || !storedToken) {
-            console.log("[AuthContext] 无本地token，尝试通过cookie获取用户信息");
             fetchUserInfo();
           }
         }
       } catch (error) {
-        console.error("[AuthContext] 从localStorage加载认证状态失败", error);
         // 清除可能损坏的存储并尝试cookie认证
         setToLocalStorage('token', null);
         setToLocalStorage('authUser', null);
@@ -284,9 +276,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           // 更新 localStorage
           setToLocalStorage('authUser', JSON.stringify(newUser));
-          console.log("[AuthContext] 更新用户信息:", newUser);
         } catch (error) {
-          console.error("[AuthContext] 更新 localStorage 用户数据失败:", error);
         }
         return newUser;
       } 
@@ -299,12 +289,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // 在罕见情况下，如果组件树更新过程中 token 状态与 ref 不同，
     // 优先使用 ref 中的值，因为它更稳定
     if (token !== stableTokenRef.current) {
-      console.log(`[AuthContext] 检测到 token 不稳定: state(${token}) !== ref(${stableTokenRef.current}), 使用 ref 值`);
       
       // 如果 ref 有值但 state 没有，同步更新 state
       // 这可以解决在路由切换时 token 短暂丢失的问题
       if (stableTokenRef.current && !token) {
-        console.log("[AuthContext] 从 ref 恢复 token 到 state");
         setToken(stableTokenRef.current);
       }
       
@@ -321,16 +309,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (storedToken && !token) {
       stableTokenRef.current = storedToken;
       setToken(storedToken);
-      console.log("[AuthContext] 手动同步: 从localStorage恢复token");
     }
     
     if (storedUser && !user) {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        console.log("[AuthContext] 手动同步: 从localStorage恢复用户数据");
       } catch (error) {
-        console.error("[AuthContext] 手动同步: 用户数据解析失败", error);
       }
     }
   };

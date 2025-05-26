@@ -834,3 +834,62 @@ body.showing-comments .comment-container {
   from { opacity: 0; }
   to { opacity: 1; }
 } 
+
+/* 评论嵌套连接线样式 */
+.comment-item {
+  position: relative;
+}
+
+.comment-item.depth-1,
+.comment-item.depth-2,
+.comment-item.depth-3,
+.comment-item.depth-4,
+.comment-item.depth-5 {
+  margin-left: 12px !important;
+  border-left: 2px solid transparent;
+}
+
+/* 不同深度的评论回复线使用不同颜色 */
+.comment-item.depth-1 {
+  border-left-color: rgba(95, 129, 255, 0.4);
+}
+
+.comment-item.depth-2 {
+  border-left-color: rgba(95, 200, 255, 0.4);
+}
+
+.comment-item.depth-3 {
+  border-left-color: rgba(255, 129, 95, 0.4);
+}
+
+.comment-item.depth-4 {
+  border-left-color: rgba(95, 255, 149, 0.4);
+}
+
+.comment-item.depth-5 {
+  border-left-color: rgba(184, 95, 255, 0.4);
+}
+
+/* 创建连接到评论头像的弧线 */
+.comment-item.depth-1::before,
+.comment-item.depth-2::before,
+.comment-item.depth-3::before,
+.comment-item.depth-4::before,
+.comment-item.depth-5::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 28px;
+  width: 10px;
+  height: 12px;
+  border-bottom-left-radius: 8px;
+  border-left: 2px solid;
+  border-bottom: 2px solid;
+  border-color: inherit;
+}
+
+/* 连接线与折叠按钮的样式 */
+.comment-item .fold-button {
+  position: relative;
+  z-index: 2;
+} 

@@ -30,15 +30,12 @@ const NotificationIcon: React.FC = () => {
       loadingRef.current = true;
       
       try {
-        console.log('[通知] 开始获取未读通知数量...');
         const count = await fetchUnreadNotificationCount();
-        console.log(`[通知] 获取到未读通知数量: ${count}`);
         setUnreadCount(count);
         setHasError(false);
         setErrorCount(0);
         setShouldShow(true);
       } catch (error) {
-        console.error('[通知] 获取未读通知数量失败', error);
         // 检查是否是401错误（未授权）
         const isAuthError = error && (
           (error as any).response?.status === 401 || 
@@ -46,7 +43,6 @@ const NotificationIcon: React.FC = () => {
         );
         
         if (isAuthError) {
-          console.log('[通知] 认证错误，可能需要重新登录');
           setShouldShow(false); // 认证错误时隐藏通知图标
           return;
         }
@@ -55,7 +51,6 @@ const NotificationIcon: React.FC = () => {
         setErrorCount(prev => prev + 1);
         
         if (errorCount >= 3) {
-          console.log('[通知] 连续错误超过3次，暂时隐藏通知图标');
           setShouldShow(false);
           
           if (errorTimerRef.current) {
@@ -63,7 +58,6 @@ const NotificationIcon: React.FC = () => {
           }
           
           errorTimerRef.current = setTimeout(() => {
-            console.log('[通知] 尝试恢复显示通知图标');
             setShouldShow(true);
             setErrorCount(0);
             loadUnreadCount();
@@ -120,7 +114,6 @@ const NotificationIcon: React.FC = () => {
             setIsOpen(true);
           })
           .catch(error => {
-            console.error('[通知] 重试获取未读通知数量失败', error);
             setHasError(true);
           });
       }

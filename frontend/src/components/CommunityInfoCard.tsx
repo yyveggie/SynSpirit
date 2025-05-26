@@ -30,9 +30,9 @@ const CommunityInfoCard: React.FC<CommunityInfoCardProps> = ({
   };
 
   return (
-    <div className="rounded-lg bg-gray-800/50 p-4 shadow-md backdrop-blur-sm border border-gray-700/50">
-      <h2 className="text-xl font-semibold text-white mb-2">{name}</h2>
-      <p className="text-sm text-gray-300 mb-4">
+    <div className="rounded-lg bg-gray-100 p-4 shadow-md">
+      <h2 className="text-xl font-semibold text-black mb-2">{name}</h2>
+      <p className="text-sm text-gray-700 mb-4">
         {description || '暂无社区描述。'}
       </p>
       {/* 在这里可以使用 isFavorited, onToggleFavorite, isLoadingFavorite 来控制按钮状态或显示 */} 

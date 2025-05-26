@@ -39,12 +39,12 @@ const getAvatarUrl = (avatarUrl?: string | null): string | null => {
   if (!avatarUrl.startsWith('/')) {
     // 如果不是以斜杠开头，确保路径正确
     return `${API_BASE_URL}/${avatarUrl}`;
-  }
+    }
   
   // 处理以斜杠开头的情况，避免双斜杠
   if (avatarUrl.startsWith('/') && API_BASE_URL.endsWith('/')) {
     return `${API_BASE_URL}${avatarUrl.substring(1)}`;
-  }
+  } 
   
   // 一般情况，直接拼接
   return `${API_BASE_URL}${avatarUrl}`;
@@ -119,7 +119,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
         // 否则，用Link包裹头像内容
         <Link to={profileLink} title={`查看 ${username} 的个人主页`} className="flex-shrink-0">
           {renderAvatarContent()}
-        </Link>
+      </Link>
       )}
 
       {/* 用户名链接 - 仅在 showName 为 true 时显示 */}

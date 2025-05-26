@@ -247,9 +247,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
   const tagsEditorRef = useRef<HTMLDivElement>(null);
   // --- 结束恢复 ---
 
-  // --- 修改：当前激活的标签页状态，添加 'series' ---
-  const [activeTab, setActiveTab] = useState<'articles' | 'posts' | 'dynamics' | 'series'>('articles');
-  // --- 结束修改 ---
+  // --- 修改：当前激活的标签页状态，添加 'introduction' 并设为默认 ---
+  const [activeTab, setActiveTab] = useState<'introduction' | 'articles' | 'posts' | 'dynamics' | 'series'>('introduction');
+  // --- 结束修改 --
 
   // --- 新增：头像上传状态 --- 
   const [selectedAvatar, setSelectedAvatar] = useState<File | null>(null);
@@ -448,7 +448,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
       
       // Reset content states ONLY when the target user ID actually changes
       console.log("Resetting content lists because targetUserId changed.");
-      setActiveTab('articles');
+      setActiveTab('introduction'); // Changed from 'articles' to 'introduction'
       setMyArticles([]);
       setMyPosts([]);
       setMyDynamics([]);
@@ -748,17 +748,22 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
 
   // --- Handle Nickname Save --- 
   const handleSaveNickname = async () => {
-      if (!userData) return;
+      if (!userData || !token) return; 
+      // If nicknameInput is the same as current nickname, don't make API call unless there was an error previously
+      if (nicknameInput === (userData?.nickname || '') && !nicknameError) {
+          setIsEditingNickname(false); // Just exit editing mode
+          return;
+      }
+      
       console.log('[handleSaveNickname] Starting save. Current userData:', userData);
       setIsSavingNickname(true);
-      setNicknameError(null);
+      setNicknameError(null); // Clear previous error before saving
       try {
-          // Basic client-side length check
           if (nicknameInput.length > 50) {
               throw new Error("昵称不能超过 50 个字符");
           }
           const response = await axios.put(`${API_BASE_URL}/api/users/profile`, 
-            { nickname: nicknameInput || null }, // Send null if empty
+            { nickname: nicknameInput || null }, // Send null if empty to potentially clear it
             {
               headers: {
                 'Authorization': `Bearer ${token}`
@@ -768,35 +773,55 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
           console.log('[handleSaveNickname] Received response:', response);
           if (response.status === 200) {
               console.log('[handleSaveNickname] PUT Success. User data from response:', response.data.user);
-              // 只更新nickname字段，保留其他用户数据不变
+              const newNickname = response.data.user.nickname;
               setUserData(prevData => {
                 console.log('[handleSaveNickname] Updating local userData. PrevData:', prevData);
-                if (!prevData) return response.data.user;
-                const newData = { ...prevData, nickname: response.data.user.nickname };
+                if (!prevData) return response.data.user; // Should ideally not happen if userData exists
+                const newData = { ...prevData, nickname: newNickname };
                 console.log('[handleSaveNickname] New local userData will be:', newData);
                 return newData;
               });
               
               if (updateUser && currentUser) {
                 console.log('[handleSaveNickname] Updating global currentUser. Prev currentUser:', currentUser);
-                // 对于全局用户状态也仅更新nickname
-                const newGlobalUser = { ...currentUser, nickname: response.data.user.nickname };
+                const newGlobalUser = { ...currentUser, nickname: newNickname };
                 console.log('[handleSaveNickname] New global currentUser will be:', newGlobalUser);
                 updateUser(newGlobalUser);
               }
               
-              setIsEditingNickname(false); // Exit editing mode
+              setIsEditingNickname(false); // Exit editing mode on success
+              toast.success("昵称已更新！");
           } else {
               throw new Error(response.data?.error || "保存昵称失败");
           }
       } catch (err: any) {
           console.error("Error saving nickname:", err);
-          setNicknameError(err.response?.data?.error || err.message || "保存昵称时出错");
+          const errorMsg = err.response?.data?.error || err.message || "保存昵称时出错";
+          setNicknameError(errorMsg);
+          // Do not exit editing mode on error, so user can correct
+          toast.error(`保存失败: ${errorMsg}`);
       } finally {
           setIsSavingNickname(false);
       }
   };
   // --- End Handle Nickname Save ---
+
+  // --- Add handlers for inline nickname editing ---
+  const handleCancelNicknameEdit = () => {
+    setIsEditingNickname(false);
+    setNicknameInput(userData?.nickname || '');
+    setNicknameError(null); // Clear any previous error
+  };
+
+  const handleNicknameEditKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleSaveNickname();
+    } else if (event.key === 'Escape') {
+      handleCancelNicknameEdit();
+    }
+  };
+  // --- End handlers for inline nickname editing ---
 
   // --- 恢复：标签处理函数 --- 
   // 初始化标签状态
@@ -1330,9 +1355,26 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
     // Ensure handleSaveBio is included in dependencies, as it's called here
   }, [isEditingBio, isSavingBio, handleSaveBio, isOwnProfile, bioEditorRef]);
 
+  // --- 新增：处理 Bio 文本域的键盘事件（例如 Enter 保存，Esc 取消） ---
+  const handleBioKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { // Cmd/Ctrl + Enter to save
+      event.preventDefault(); // 防止换行
+      handleSaveBio();
+    } else if (event.key === 'Escape') { // Escape to cancel
+      event.preventDefault();
+      setIsEditingBio(false);
+      setBioInput(userData?.bio || ''); // Reset to original bio
+      setBioError(null);
+    }
+  };
+  // --- 结束新增 ---
+
+  // Ref for Bio editor container (for click outside)
+  // ... existing code ...
+
   // Render profile page content
   return (
-    <div className="flex flex-col min-h-screen text-white">
+    <div className="flex flex-col min-h-screen text-black">
       <div className="flex flex-1 overflow-hidden">
         <SideNavbar /* 移除 isOpen prop */ />
         <main 
@@ -1343,10 +1385,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
           
           {userData ? (
             <div className="max-w-4xl mx-auto">
-              <div className="mb-12">
-                <div className="flex flex-col md:flex-row md:items-start md:space-x-8">
+              <div className="mb-6"> {/* 从mb-12减小到mb-6 */}
+                <div className="flex flex-col md:flex-row md:items-start md:space-x-6"> {/* 从space-x-8减小到space-x-6 */}
                   {/* 头像部分 */}
-                  <div className="flex flex-col items-center mb-6 md:mb-0">
+                  <div className="flex flex-col items-center mb-4 md:mb-0"> {/* 从mb-6减小到mb-4 */}
                     {/* 移除原来的退出按钮，将放置在昵称旁边 */}
                     <div className={`relative ${isOwnProfile ? 'group cursor-pointer' : ''}`} 
                      onClick={isOwnProfile ? triggerFileInput : undefined}
@@ -1376,7 +1418,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                           className="w-32 h-32 rounded-full object-cover border-2 border-indigo-600/50"
                         />
                       ) : (
-                        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-700 flex items-center justify-center text-white text-3xl font-bold border-2 border-indigo-600/50">
+                        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-700 flex items-center justify-center text-black text-3xl font-bold border-2 border-indigo-600/50">
                           {(userData.nickname || userData.email || 'U').charAt(0).toUpperCase()}
                         </div>
                       )}
@@ -1396,111 +1438,80 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
 
                   {/* 用户信息部分 */}
                   <div className="flex-1 flex flex-col">
-                    <div className={`group relative mb-3 ${isOwnProfile ? '' : 'pointer-events-none'}`}> 
-                      <div className="flex items-center">
-                        <h1 className="text-4xl md:text-5xl font-bold text-white inline">{userData.nickname || <span className="italic text-gray-400">未设置昵称</span>}</h1>
-                        
-                        {/* 移除此处的退出按钮 */}
-                      </div>
-                      
-                      {isOwnProfile && (
-                        <button 
-                          onClick={() => setIsEditingNickname(true)}
-                          className="absolute -right-6 top-1/2 -translate-y-1/2 ml-2 text-blue-400 hover:text-blue-300 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          title="编辑昵称"
-                          hidden={isEditingNickname}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /> </svg>
-                        </button>
-                      )}
-                    </div>
-                    
-                    {isOwnProfile && isEditingNickname && (
-                      <div className="mt-2 mb-3 flex items-center space-x-2">
-                                <input 
-                                    type="text"
-                                    value={nicknameInput}
-                                    onChange={(e) => setNicknameInput(e.target.value)}
-                                    placeholder="设置您的昵称"
-                                    maxLength={50}
-                      className="flex-grow max-w-xs px-3 py-1.5 bg-gray-700/60 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-lg text-white"
-                                />
-                                 <button
-                                    onClick={handleSaveNickname}
-                                    disabled={isSavingNickname}
-                                    className={`px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs transition-colors ${isSavingNickname ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    {isSavingNickname ? '保存中' : '保存'}
-                                </button>
-                                <button
-                                    onClick={() => { setIsEditingNickname(false); setNicknameInput(userData?.nickname || ''); setNicknameError(null); }}
-                                    className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white rounded-md text-xs transition-colors"
-                                >
-                                    取消
-                                </button>
-                            </div>
-                )}
-                    {nicknameError && !isEditingNickname && <p className="text-xs text-red-400 mt-1">{nicknameError}</p>}
-
-                    <p className="text-sm text-gray-400 mt-1 mb-4">用户 ID: {userData.id} · 用户自 {new Date(userData.created_at).toLocaleDateString('zh-CN')} 加入</p>
-
-                    {/* --- 修改：Bio 编辑区域 --- */}
-                    <div 
-                      ref={bioEditorRef} // Add ref here
-                      className={`mt-2 group relative max-w-xl ${
-                        isOwnProfile && !isEditingBio ? 'cursor-pointer' : ''
-                      }`}
-                      onClick={() => {
-                        // Only allow clicking to edit if it's own profile and not already editing
-                        if (isOwnProfile && !isEditingBio) {
-                          setBioInput(userData?.bio || ''); // Ensure input starts with current bio
-                          setIsEditingBio(true);
-                          setBioError(null); // Clear previous errors
-                        }
-                      }}
-                    >
-                      {!isEditingBio ? (
-                        // Display Bio Text
-                        <p 
-                          className={`whitespace-pre-wrap break-words text-gray-300 ${
-                            !userData.bio ? 'italic text-gray-500' : ''
-                          }`}
-                          title={isOwnProfile ? "点击编辑个性签名" : undefined}
-                        >
-                          {userData.bio || (isOwnProfile ? '点击添加个性签名' : '还没有个性签名')}
-                        </p>
-                      ) : (
-                        // Display Bio Editor (Textarea)
-                        <div className="space-y-1"> 
-                          <textarea 
-                            value={bioInput}
-                            onChange={(e) => setBioInput(e.target.value)}
-                            placeholder="简单介绍一下自己..."
-                            rows={3}
-                            // --- 再次修改样式：移除焦点时的 ring 效果，保持边框颜色不变 --- 
-                            className="w-full p-2 text-sm text-white bg-gray-700/30 border border-gray-600/50 rounded-md focus:outline-none resize-y placeholder-gray-400"
-                            autoFocus // Automatically focus the textarea when it appears
-                            onKeyDown={(e) => {
-                              // Optional: Allow saving with Enter/Cmd+Enter if needed, or just rely on click outside
-                              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                                handleSaveBio();
-                              }
-                            }}
-                          />
-                          {bioError && <p className="text-xs text-red-400 mt-0.5">{bioError}</p>}
+                    {/* --- REPLACEMENT FOR NICKNAME DISPLAY AND EDIT TRIGGER --- */}
+                    {isOwnProfile && !isEditingNickname && (
+                      <div
+                        className="group relative mb-0 cursor-pointer"
+                        onClick={() => {
+                          setNicknameInput(userData?.nickname || '');
+                          setIsEditingNickname(true);
+                          setNicknameError(null);
+                        }}
+                        title="点击编辑昵称"
+                      >
+                        <div className="flex items-center">
+                          <h1 className="text-4xl md:text-5xl font-bold text-black inline break-all py-1">
+                            {userData.nickname || <span className="italic text-gray-400">未设置昵称</span>}
+                          </h1>
+                          <span className="absolute -right-8 top-1/2 -translate-y-1/2 ml-2 text-blue-400 hover:text-blue-300 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                          </span>
                         </div>
-                      )}
-                      {/* Remove the old edit icon button */}
-                    </div>
+                      </div>
+                    )}
+                    {!isOwnProfile && !isEditingNickname && (
+                      // Display mode for other users' profiles (not clickable)
+                      <div className="group relative mb-0 pointer-events-none"> {/* Changed mb-1 to mb-0 */}
+                        <div className="flex items-center">
+                          <h1 className="text-4xl md:text-5xl font-bold text-black inline break-all py-1">
+                            {userData.nickname || <span className="italic text-gray-400">未设置昵称</span>}
+                          </h1>
+                        </div>
+                      </div>
+                    )}
+                    {/* --- END REPLACEMENT --- */}
+
+                    {/* --- NICKNAME EDITING STATE --- */}
+                    {isOwnProfile && isEditingNickname && (
+                      <div className="mb-0 relative"> {/* Changed mb-1 to mb-0 */}
+                        <input
+                          type="text"
+                          value={nicknameInput}
+                          onChange={(e) => setNicknameInput(e.target.value)}
+                          onBlur={() => {
+                            if (!isSavingNickname) {
+                              handleSaveNickname();
+                            }
+                          }}
+                          onKeyDown={handleNicknameEditKeyDown}
+                          className="text-4xl md:text-5xl font-bold text-black bg-transparent focus:outline-none border-b-2 border-indigo-500 w-full py-1"
+                          placeholder="设置您的昵称"
+                          maxLength={50}
+                          autoFocus
+                          disabled={isSavingNickname}
+                        />
+                        {isSavingNickname && <span className="text-xs text-gray-400 absolute right-0 -bottom-5">保存中...</span>}
+                      </div>
+                    )}
+                    {/* Display nickname error if any, and not currently saving */}
+                    {nicknameError && !isSavingNickname && <p className="text-xs text-red-400 mt-1 mb-0">{nicknameError}</p>} {/* Changed mb-1 to mb-0 */}
+                    {/* --- END NICKNAME EDITING STATE --- */}
+                    
+                    <p className="text-sm text-gray-400 mb-0">{userData.id ? `用户 ID: ${userData.id} · 用户自 ${new Date(userData.created_at).toLocaleDateString('zh-CN')} 加入` : ""}</p>
+
+                    {/* --- 修改：Bio 编辑区域 (这部分将被移动到 'introduction' 标签页) --- */}
+                    {/* THE ENTIRE BIO DISPLAY AND EDITING BLOCK THAT WAS HERE (approx lines 1450-1534) IS REMOVED */}
                     {/* --- 结束修改：Bio 编辑区域 --- */}
                     
                  {/* Remove the old separate Bio editor block */}
 
                     {/* 标签部分 */}
-                <div className="mt-4">
-                  <div className="flex items-center mb-2">
+                <div className="mt-4"> {/* Changed from mt-0 to mt-4 */}
+                  <div className="flex items-center mb-0">
                     {isOwnProfile && !isEditingTags && (!tagsArray || tagsArray.length === 0) && (
-                        <h3 className="text-sm text-gray-400 mr-2">标签</h3>
+                        <h3 className="text-sm text-gray-600 mr-2">标签</h3>
                     )}
                   </div>
                   
@@ -1549,27 +1560,120 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                 </div>
                 </div>
                     
-              <div className="mt-10 mb-8 border-b border-gray-700/50">
+              <div className="mt-6 mb-6 border-b border-gray-300"> {/* 将mt-10和mb-8减小到mt-6和mb-6 */}
                 <nav className="-mb-px flex space-x-6 justify-center md:justify-start" aria-label="Tabs">
+                  {/* --- 新增：介绍标签按钮 --- */}
+                  <button
+                       key="introduction"
+                       onClick={() => setActiveTab('introduction')}
+                       className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200 
+                         ${activeTab === 'introduction'
+                      ? 'border-indigo-600 text-black'
+                      : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'}`}
+                  >
+                       介 绍
+                  </button>
+                  {/* --- 结束新增 --- */}
                   {(isOwnProfile ? ['articles', 'posts', 'dynamics', 'series'] : ['articles', 'posts', 'dynamics']).map((tab) => (
                     <button
                        key={tab}
-                       onClick={() => setActiveTab(tab as any)}
+                       onClick={() => setActiveTab(tab as any)} // Cast 'tab' to any to satisfy the more specific type of setActiveTab temporarily
                        className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200 
-                         ${activeTab === tab 
-                      ? 'border-indigo-400 text-indigo-300' 
-                      : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'}
-                  `}
-                >
-                       {tab === 'articles' ? '文 章' : (tab === 'posts' ? '帖 子' : (tab === 'dynamics' ? '动 态' : '系 列'))} 
-                </button>
+                         ${activeTab === tab
+                      ? 'border-indigo-600 text-black'
+                      : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'}`}
+                  >
+                       {/* --- 修改：调整标签文本获取逻辑 --- */}
+                       {tab === 'articles' ? '文 章' : tab === 'posts' ? '帖 子' : tab === 'dynamics' ? '动 态' : tab === 'series' ? '系 列' : '未知标签'}
+                       {/* --- 结束修改 --- */}
+                  </button>
                   ))}
               </nav>
             </div>
 
-              <div className="mt-8">
+              <div className="mt-4">
+              {/* --- 新增：介绍标签页内容 --- */}
+              {activeTab === 'introduction' && (
+                <div className="min-h-[300px] relative pb-16"> {/* 与其他标签页保持类似结构 */}
+                  {/* Bio Display and Edit Section - MOVED HERE */}
+                  <div 
+                    className={`relative group ${isOwnProfile && !isEditingBio ? 'cursor-pointer hover:bg-gray-500/10 p-3 rounded-md transition-colors duration-150' : 'p-3'}`}
+                    onClick={() => {
+                      if (isOwnProfile && !isEditingBio && !isSavingBio) {
+                        setBioInput(userData?.bio || '');
+                        setIsEditingBio(true);
+                        setBioError(null);
+                      }
+                    }}
+                    ref={bioEditorRef} // Ref for click outside
+                  >
+                    {/* Display Bio */}
+                    {!isEditingBio && (
+                      <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap break-words">
+                        {userData?.bio ? (
+                          <p>{userData.bio}</p>
+                        ) : (
+                          <p className="italic text-gray-400">
+                            {isOwnProfile ? "点击添加你的个人介绍..." : "用户暂未填写个人介绍"}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Edit Bio Textarea (only if isOwnProfile and isEditingBio) */}
+                    {isOwnProfile && isEditingBio && (
+                      <div className="mt-1">
+                        <textarea
+                          value={bioInput}
+                          onChange={(e) => setBioInput(e.target.value)}
+                          onKeyDown={handleBioKeyDown} // Use new handler for Enter/Escape
+                          onBlur={(e) => {
+                            // Prevent saving if the click is on a save/cancel button or inside editor
+                            // This check might need refinement if there are explicit save/cancel buttons
+                            if (bioEditorRef.current && !bioEditorRef.current.contains(e.relatedTarget as Node)) {
+                              // Only save on blur if not currently in saving process
+                              // and if the content has actually changed.
+                              if (!isSavingBio && bioInput !== (userData?.bio || '')) {
+                                handleSaveBio();
+                              } else if (bioInput === (userData?.bio || '')) {
+                                // If content hasn't changed, just exit editing mode
+                                setIsEditingBio(false);
+                                setBioError(null);
+                              }
+                            }
+                          }}
+                          placeholder="输入你的个人介绍..."
+                          rows={6}
+                          maxLength={1000} // Example maxLength
+                          className="w-full p-2 text-sm text-black bg-gray-100/50 border border-gray-300/50 rounded-md focus:outline-none resize-y placeholder-gray-400"
+                          autoFocus
+                        />
+                        {bioError && <p className="text-xs text-red-400 mt-0.5">{bioError}</p>}
+                        {/* Optional: Add explicit Save/Cancel buttons if desired for better UX */}
+                        {/* <div className="mt-2 flex justify-end space-x-2">
+                          <button onClick={handleSaveBio} disabled={isSavingBio} className="px-3 py-1 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600 disabled:opacity-50">
+                            {isSavingBio ? '保存中...' : '保存'}
+                          </button>
+                          <button onClick={() => { setIsEditingBio(false); setBioInput(userData?.bio || ''); setBioError(null); }} className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                            取消
+                          </button>
+                        </div> */}
+                      </div>
+                    )}
+                    {/* Edit Icon (only if isOwnProfile and not editing) */}
+                    {isOwnProfile && !isEditingBio && (
+                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* --- 结束新增：介绍标签页内容 --- */}
               {activeTab === 'articles' && (
-                  <div className="space-y-3 min-h-[300px] relative pb-16">
+                  <div className="space-y-2 min-h-[300px] relative pb-16">
                     {/* 内容过渡动画 */}
                     <div className={`transition-opacity duration-300 ${isLoadingArticles ? 'opacity-70' : 'opacity-100'}`}>
                       {myArticles.length > 0 ? (
@@ -1578,10 +1682,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                               {/* 左侧：标题 */}
                               <Link 
                                 to={`/article/${article.slug}`}
-                                className="text-gray-200 hover:text-blue-300 truncate flex-grow mr-4"
+                                className="text-gray-700 hover:text-blue-600 truncate flex-grow mr-4"
                                 title={article.title}
                               >
-                                {article.series_name && <span className="text-xs text-purple-300 mr-1">[{article.series_name}]</span>}
+                                {article.series_name && <span className="text-xs text-purple-500 mr-1">[{article.series_name}]</span>}
                                 {article.title}
                               </Link>
                               {/* 右侧：日期和按钮 */}
@@ -1632,7 +1736,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                   </div>
               )}
               {activeTab === 'posts' && (
-                  <div className="space-y-3 min-h-[300px] relative pb-16">
+                  <div className="space-y-2 min-h-[300px] relative pb-16">
                     {/* 内容过渡动画 */}
                     <div className={`transition-opacity duration-300 ${isLoadingPosts ? 'opacity-70' : 'opacity-100'}`}>
                       {myPosts.length > 0 ? (
@@ -1641,7 +1745,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                               {/* 左侧：标题 */}
                               <Link 
                                 to={`/posts/${post.slug}`}
-                                className="text-gray-200 hover:text-blue-300 truncate flex-grow mr-4"
+                                className="text-gray-700 hover:text-blue-600 truncate flex-grow mr-4"
                                 title={post.title}
                               >
                                 {post.title}
@@ -1694,7 +1798,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                   </div>
               )}
               {activeTab === 'dynamics' && (
-                  <div className="space-y-3 min-h-[300px] relative pb-16">
+                  <div className="space-y-2 min-h-[300px] relative pb-16">
                     {/* 内容过渡动画 */}
                     <div className={`transition-opacity duration-300 ${isLoadingDynamics ? 'opacity-70' : 'opacity-100'}`}>
                       {myDynamics.length > 0 ? (
@@ -1712,11 +1816,11 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                                       console.log("ProfilePage: Rendering original dynamic:", JSON.stringify(dynamic));
                                       return (
                                         <div>
-                                          <span className="text-sm text-green-400">
+                                          <span className="text-sm text-green-600">
                                             发布了原创动态
                                           </span>
                                           {dynamic.share_comment && (
-                                            <p className="text-gray-200 text-sm mt-1 whitespace-pre-wrap break-words">
+                                            <p className="text-gray-700 text-sm mt-1 whitespace-pre-wrap break-words">
                                               {dynamic.share_comment}
                                             </p>
                                           )}
@@ -1741,19 +1845,19 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                                   ) : (
                                     /* 分享/转发动态 */
                                     <div>
-                                <span className="text-sm text-gray-400">
+                                <span className="text-sm text-gray-600">
                                   分享了 {dynamic.target_type === 'article' ? '文章:' : dynamic.target_type === 'post' ? '帖子:' : '内容:'}
                                 </span>
                                 {dynamic.target_slug && dynamic.target_title && dynamic.target_type && (
                                   <Link 
                                     to={dynamic.target_type === 'article' ? `/article/${dynamic.target_slug}` : `/posts/${dynamic.target_slug}`}
-                                    className="text-blue-300 hover:text-blue-200 hover:underline ml-1 font-medium"
+                                    className="text-blue-600 hover:text-blue-800 hover:underline ml-1 font-medium"
                                   >
                                     "{dynamic.target_title}"
                                   </Link>
                                 )}
                                 {dynamic.share_comment && (
-                                  <p className="text-gray-200 text-sm mt-1 pl-2 border-l-2 border-gray-600/50 whitespace-pre-wrap break-words">
+                                  <p className="text-gray-700 text-sm mt-1 pl-2 border-l-2 border-gray-600/50 whitespace-pre-wrap break-words">
                                     {dynamic.share_comment}
                                   </p>
                                       )}
@@ -1802,16 +1906,16 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                  {activeTab === 'series' && isOwnProfile && (
                      <div className="space-y-3">
                          {isLoadingSeries ? (
-                             <p className="text-gray-400 text-center py-4">加载系列中...</p>
+                             <p className="text-gray-600 text-center py-4">加载系列中...</p>
                          ) : mySeries.length > 0 ? (
                              mySeries.map((seriesName, index) => (
                                  <div key={index} className="py-2 border-b border-gray-700/30">
-                                     <span className="text-gray-200">{seriesName}</span>
+                                     <span className="text-gray-700">{seriesName}</span>
                                      {/* TODO: 可能添加编辑/删除系列的按钮 */} 
             </div>
                              ))
                          ) : (
-                             <p className="text-gray-400 text-center py-4">您还没有创建任何系列。</p>
+                             <p className="text-gray-600 text-center py-4">您还没有创建任何系列。</p>
                          )}
           </div>
                  )}

@@ -178,6 +178,10 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   const { token: authToken, user: currentUserFromAuth } = useAuth();
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
+  // 去除showReplyBox状态，而是用CSS来控制动画
+  const replyContainerRef = useRef<HTMLDivElement>(null);
+  // 用于跟踪点击事件来源的ref
+  const replyButtonClickedRef = useRef(false);
   const queryClient = useQueryClient();
   const [refreshAnimationKey, setRefreshAnimationKey] = useState(0);
   
@@ -641,27 +645,28 @@ const CommentSection: React.FC<CommentSectionProps> = ({
 
   // --- Other functions (handleReplyClick, handleCancelReply, toggleReplies, handleSortChange, etc.) remain largely the same ---
   const handleReplyClick = (commentId: number, targetUsername: string) => {
+    // 标记该点击来自回复按钮，防止handleClickOutside立即触发
+    replyButtonClickedRef.current = true;
+    
     if (replyToCommentId === commentId) {
+      // 如果点击的是当前已打开的回复框，关闭它
       setReplyToCommentId(null);
       setReplyTargetUser('');
       setReplyContent('');
     } else {
-      if (replyToCommentId !== null) {
-        setReplyToCommentId(null);
-        setReplyTargetUser('');
-        setReplyContent('');
-        setTimeout(() => {
+      // 切换到新的回复框
       setReplyToCommentId(commentId);
       setReplyTargetUser(targetUsername);
       setReplyContent('');
-          setTimeout(() => { replyInputRef.current?.focus(); }, 10);
-        }, 10);
-      } else {
-        setReplyToCommentId(commentId);
-        setReplyTargetUser(targetUsername);
-        setReplyContent('');
-        setTimeout(() => { replyInputRef.current?.focus(); }, 10);
-      }
+      
+      // 使用requestAnimationFrame确保DOM更新后再聚焦
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (replyInputRef.current) {
+            replyInputRef.current.focus();
+          }
+        }, 100);
+      });
     }
   };
   
@@ -741,6 +746,77 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   }, [loadingComments, refetchComments]);
   // --- 结束新增 ---
 
+  // 添加自定义CSS样式到组件中
+  useEffect(() => {
+    // 创建style元素
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: scaleY(0.9);
+          max-height: 0;
+        }
+        to {
+          opacity: 1;
+          transform: scaleY(1);
+          max-height: 200px;
+        }
+      }
+      
+      @keyframes slideUp {
+        from {
+          opacity: 1;
+          transform: scaleY(1);
+          max-height: 200px;
+        }
+        to {
+          opacity: 0;
+          transform: scaleY(0.9);
+          max-height: 0;
+        }
+      }
+      
+      .animate-slideDown {
+        animation: slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      
+      .comment-section-unmount {
+        animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+    `;
+    
+    // 添加到document
+    document.head.appendChild(style);
+    
+    // 清理函数
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  // 优化：简化点击外部关闭的逻辑
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      // 如果点击不是来自回复按钮，且点击在回复框外部，则关闭回复框
+      if (
+        !replyButtonClickedRef.current && 
+        replyContainerRef.current && 
+        !replyContainerRef.current.contains(event.target as Node) && 
+        replyToCommentId !== null
+      ) {
+        handleCancelReply();
+      }
+      // 重置点击状态
+      replyButtonClickedRef.current = false;
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [replyToCommentId]);
+
   // --- Restore renderComment function definition ---
   const renderComment = (comment: Comment, depth = 0) => {
     const isRootComment = depth === 0;
@@ -757,31 +833,22 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     const repliesCount = hasReplies ? countTotalComments(comment.replies) : 0;
 
     return (
-      <div key={comment.id} className={`comment-item py-3 relative`} 
-           style={{ 
-             paddingLeft: depth > 0 ? `${depth * 8}px` : '0',
-             marginLeft: depth > 0 ? '12px' : '0' 
-           }}>
-         {/* 统一嵌套标识线 - 根据深度动态调整 */}
+      <div key={comment.id} className={`comment-item ${depth > 0 ? 'ml-5 md:ml-6' : ''} py-3 relative`}>
+         {/* 单条连接线 - 圆角实现曲线效果 */}
          {depth > 0 && (
-            <div className="absolute" style={{
-              left: "0px",
-              top: "0",
-              bottom: hasReplies && !shouldHideReplies ? '50%' : '100%', 
-              width: "1px",
-              background: "rgba(0, 0, 0, 0.2)"
+            <div style={{
+              position: 'absolute',
+              left: '-18px',
+              top: '-40px', // 适当的距离，不要太高
+              width: '17px', // 稍微缩短一点，避免和头像重叠
+              height: '55px',
+              border: 'none',
+              borderLeft: '1px solid rgba(0, 0, 0, 0.3)',
+              borderBottom: '1px solid rgba(0, 0, 0, 0.3)',
+              borderBottomLeftRadius: '15px', // 更大的圆角实现平滑曲线
             }}></div>
          )}
-         {/* 水平连接线 */}
-         {depth > 0 && (
-            <div className="absolute" style={{
-              left: "0px",
-              top: "30px", 
-              width: "8px",
-              height: "1px",
-              background: "rgba(0, 0, 0, 0.2)"
-            }}></div>
-         )}
+         
          <div className="flex items-start mb-1 user-info">
             <div className="flex-shrink-0" style={{minWidth: '24px'}}>
               <UserAvatar userId={comment.user?.id ?? undefined} 
@@ -811,15 +878,17 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   <span style={{color: 'black'}}>{comment.content}</span>
                 )}
               </p>
-            
-              <div className="mt-2 flex items-center">
+              
+              {/* 按钮组容器，完全删除左边距，确保与评论内容对齐 */}
+              <div className="mt-2 flex items-center pl-0">
                 {!isDeleted && (
-                  <div className="flex items-center">
-                    {/* 折叠按钮移到最左侧 */}
+                  <div className="flex items-center w-full pl-0">
+                    {/* 所有按钮统一放在这里，折叠按钮放在最左侧，与评论内容首字符对齐 */}
                     {hasReplies && (
                       <button
                         onClick={(e) => toggleReplies(comment.id, e)}
-                        className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 py-0 px-0.5 focus:outline-none font-mono text-xs flex items-center justify-center mr-3 w-[36px] text-center"
+                        className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 py-0 px-0 focus:outline-none font-mono text-xs flex items-center justify-start mr-4 flex-shrink-0"
+                        style={{marginLeft: 0, paddingLeft: 0}}
                         aria-label={shouldHideReplies ? '展开回复' : '收起回复'}>
                         {shouldHideReplies ? `[+${repliesCount}]` : '[-]'}
                       </button>
@@ -827,35 +896,39 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                     
                     {/* 回复按钮 */}
                     <button onClick={() => handleReplyClick(comment.id, displayName)}
-                      className={`text-xs ${isReplying ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'} flex items-center mr-4`}
+                      className={`text-xs ${isReplying ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'} flex items-center mr-4 flex-shrink-0`}
                       disabled={!authToken} title={!authToken ? "请先登录" : (isReplying ? "取消回复" : "回复")}>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </button>
                     
-                    {/* 点赞按钮 */}
-                    <button onClick={() => authToken ? (isLikedByCurrentUser ? handleUnlike(comment.id) : handleLike(comment.id)) : toast.warn('请先登录后点赞')}
-                      className={`text-xs flex items-center transition-colors duration-200 ${isLikedByCurrentUser ? 'text-pink-500 hover:text-pink-400' : 'text-gray-500 hover:text-pink-400'} mr-4`}
-                      disabled={!authToken || toggleLikeMutation.isPending} title={!authToken ? "请先登录" : (isLikedByCurrentUser ? "取消点赞" : "点赞")}>
-                      {isLikedByCurrentUser ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                        </svg>
-                      )}
-                      {currentLikeCount > 0 && <span className="text-xs ml-1">{currentLikeCount}</span>}
-                    </button>
+                    {/* 完全重构点赞按钮，使用固定布局 */}
+                    <div className="flex-shrink-0 mr-4 w-[32px]">
+                      <button onClick={() => authToken ? (isLikedByCurrentUser ? handleUnlike(comment.id) : handleLike(comment.id)) : toast.warn('请先登录后点赞')}
+                        className={`text-xs flex items-center transition-colors duration-200 ${isLikedByCurrentUser ? 'text-red-500 hover:text-red-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        disabled={!authToken || toggleLikeMutation.isPending} title={!authToken ? "请先登录" : (isLikedByCurrentUser ? "取消点赞" : "点赞")}>
+                        <div className="w-[14px] flex-shrink-0">
+                          {isLikedByCurrentUser ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-red-500" viewBox="0 0 20 20" fill="#ef4444">
+                              <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="ml-1 tabular-nums w-[12px] text-center block text-xs">{currentLikeCount}</span>
+                      </button>
+                    </div>
                     
-                    {/* 删除按钮 */}
+                    {/* 删除按钮 - 使用细线条图标 */}
                     {canDelete && (
                       <button onClick={() => handleDeleteCommentOrReply(comment.id)}
-                        className="text-xs text-gray-500 hover:text-red-500 flex items-center" title="删除评论">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                        className="text-xs text-gray-500 hover:text-red-500 flex items-center flex-shrink-0" title="删除评论">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                         </svg>
                       </button>
                     )}
@@ -865,16 +938,26 @@ const CommentSection: React.FC<CommentSectionProps> = ({
               
               {/* 回复输入框 */}
               {replyToCommentId === comment.id && (
-                <div className="relative w-full mt-3">
-                  <textarea ref={replyInputRef} value={replyContent} onChange={handleReplyChange}
-                    placeholder={`回复 ${replyTargetUser}...`} rows={2}
-                    className="w-full p-3 pr-10 pb-3 bg-gray-800/90 rounded-md text-sm text-white placeholder-gray-400 resize-none h-16 shadow-inner border-0 outline-none focus:ring-1 focus:ring-blue-500/50"
+                <div 
+                  ref={replyContainerRef}
+                  className="relative w-full mt-3 animate-slideDown"
+                  style={{
+                    animation: 'slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    transformOrigin: 'top',
+                  }}>
+                  <textarea 
+                    ref={replyInputRef} 
+                    value={replyContent} 
+                    onChange={handleReplyChange}
+                    placeholder={`回复 ${replyTargetUser}...`} 
+                    rows={2}
+                    className="w-full p-3 pr-10 pb-3 bg-gray-100 rounded-md text-sm text-gray-800 placeholder-gray-500 resize-none h-16 shadow-inner border-0 outline-none focus:ring-1 focus:ring-blue-500/50"
                     autoFocus />
                   <div className="absolute bottom-2 right-2 flex items-center space-x-2">
                     <button onClick={() => handleSubmitReply(comment.id)}
                       disabled={submittingReply || !replyContent.trim()} title="回复"
-                      className={`text-white hover:text-blue-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors duration-200 p-1 rounded hover:bg-gray-700/50 ${submittingReply ? 'animate-pulse' : ''}`}>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transform rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      className={`text-gray-600 hover:text-blue-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors duration-200 p-1 rounded hover:bg-gray-200/50 ${submittingReply ? 'animate-pulse' : ''}`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transform rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l4-4m-4 4l4 4" />
                       </svg>
                     </button>
@@ -884,19 +967,29 @@ const CommentSection: React.FC<CommentSectionProps> = ({
             </div>
          </div>
          
-         {/* 回复容器 - 移除ml-6减少DOM嵌套的影响 */}
+         {/* 回复容器 - 更好地隔离布局变化 */}
          {hasReplies && (
-           <div className="replies-container relative mt-2 space-y-2 overflow-hidden transition-all duration-300 ease-in-out" 
+           <div className="relative mt-2 ml-6 transition-all duration-300 ease-in-out" 
                style={{ 
-                 maxHeight: shouldHideReplies ? '0' : '10000px',
+                 overflow: shouldHideReplies ? 'hidden' : 'visible',
+                 maxHeight: shouldHideReplies ? '0' : '9999px',
                  opacity: shouldHideReplies ? 0 : 1,
                  marginTop: shouldHideReplies ? '0' : '0.5rem',
-                 transform: shouldHideReplies ? 'translateY(-10px)' : 'translateY(0)',
+                 contain: 'paint layout style',
                }}>
+             {/* 父评论的共享垂直线 */}
+             {!shouldHideReplies && comment.replies.length > 0 && (
+               <div className="comment-parent-line" style={{
+                 height: '100%',
+                 minHeight: '40px',
+                 pointerEvents: 'none'
+               }}></div>
+             )}
+             
              {!shouldHideReplies && (
-               <>
+               <div className="grid grid-cols-1 gap-y-2">
                  {comment.replies.map(reply => renderComment(reply, depth + 1))}
-               </>
+               </div>
              )}
            </div>
          )}
@@ -921,7 +1014,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
             <button
               onClick={handleLikeToggle}
               className={`p-1.5 rounded-md text-sm font-medium flex items-center gap-1 transition-colors duration-300 
-                ${isLiked ? 'text-pink-400 hover:text-pink-300 active:text-pink-500' : 'text-gray-400 hover:text-gray-200 active:text-gray-300'} 
+                ${isLiked ? 'text-red-500 hover:text-red-600 active:text-red-700' : 'text-gray-400 hover:text-gray-700 active:text-gray-900'} 
                 ${!token && 'opacity-50 cursor-not-allowed'}`}
               disabled={!token}
               title={!token ? "请先登录" : (isLiked ? '取消点赞' : '点赞')}
@@ -929,7 +1022,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
               </svg>
-              <span className="tabular-nums">({likeCount})</span>
+              <span className="tabular-nums min-w-[24px] inline-block text-center">({likeCount})</span>
             </button>
             {/* 收藏按钮 */}
             <button
@@ -943,7 +1036,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-3.5L5 18V4z" />
               </svg>
-              <span className="tabular-nums">({collectCount})</span>
+              <span className="tabular-nums min-w-[24px] inline-block text-center">({collectCount})</span>
             </button>
             {/* 分享按钮 */}
           <button 
@@ -957,7 +1050,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
             </svg>
-              {shareCount > 0 && <span className="tabular-nums">({shareCount})</span>}
+              {shareCount > 0 && <span className="tabular-nums min-w-[24px] inline-block text-center">({shareCount})</span>}
           </button>
          </div>
          {/* --- 结束新增操作按钮 --- */}
@@ -1053,7 +1146,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                       transition={{ duration: 0.4, ease: "linear" }}
                       style={{ display: 'flex' }}
                   >
-                      <FaSyncAlt className="h-4 w-4 block" strokeWidth={1} />
+                      <FaSyncAlt className="h-4 w-4 block" strokeWidth={0.5} />
                   </motion.div>
               )}
           </button>

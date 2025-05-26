@@ -22,14 +22,7 @@ import { useNewDynamicsNotification } from '../hooks/useNewDynamicsNotification'
 import { fetchLatestArticles, fetchCommunityArticles, Article } from '../api/articleApi';
 
 // 导入组件
-import Chatbot from '../components/Chatbot';
-// 删除不再使用的滚动条组件
-// import NewsTicker from '../components/NewsTicker';
-// import StockTicker from '../components/StockTicker';
-// 注释掉动态详情相关导入
-// import Modal from '../components/Modal';
 import DynamicFeed, { DynamicFeedHandle, DynamicItem } from '../components/DynamicFeed';
-// import { DynamicDetails } from '../components/QuotedDynamicView';
 import HomeTabs from '../components/HomeTabs';
 import HomeContent from '../components/HomeContent';
 import CreateDynamicModal from '../components/CreateDynamicModal';

@@ -43,11 +43,11 @@ const PostCard: React.FC<PostCardProps> = ({ id, title, excerpt, slug, author })
   return (
     <Link 
       to={postLink}
-      className="block p-4 rounded-lg border border-indigo-600/30 shadow-md hover:border-indigo-400/40 transition-all duration-200 group"
+      className="block p-4 rounded-lg bg-gray-100 shadow-md hover:bg-gray-200 transition-all duration-200 group"
     >
-      <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-blue-300">{title}</h3>
-      {author && <p className="text-xs text-gray-400 mb-2">作者: {author}</p>}
-      <p className="text-sm text-gray-300 line-clamp-3">{excerpt}</p>
+      <h3 className="text-lg font-semibold text-black mb-1 group-hover:text-blue-600">{title}</h3>
+      {author && <p className="text-xs text-gray-700 mb-2">作者: {author}</p>}
+      <p className="text-sm text-gray-700 line-clamp-3">{excerpt}</p>
       {/* Add other elements like author, date, tags later if needed */}
     </Link>
   );

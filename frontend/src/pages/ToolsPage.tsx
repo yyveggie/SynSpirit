@@ -5,9 +5,6 @@
  *              进行数据获取和缓存管理。
  */
 import React, { useState } from 'react'; // 移除 useEffect
-// 移除 Navbar 和 SideNavbar 的导入
-// // 已移除: import Navbar from "../components/Navbar";
-// import SideNavbar from '../components/SideNavbar';
 import { Link, useNavigate } from 'react-router-dom';
 import Chatbot from '../components/Chatbot';
 import { useSidebar } from '../contexts/SidebarContext'; // 引入 useSidebar
@@ -76,7 +73,7 @@ const ToolsPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-transparent text-white">
+        <div className="min-h-screen flex flex-col bg-white text-black">
             {/* 移除 Navbar */}
             
             <div className="flex flex-1 overflow-hidden"> 
@@ -87,17 +84,17 @@ const ToolsPage: React.FC = () => {
                     {/* 分类按钮区域 - 使用 Hook 返回的 categories */}
                     {/* 添加 categories 加载和错误处理 */} 
                     {isLoadingCategories ? (
-                        <div className="mb-6 text-gray-400">加载分类中...</div>
+                        <div className="mb-6 text-gray-700">加载分类中...</div>
                     ) : errorCategories ? (
-                        <div className="mb-6 text-red-400">加载分类失败: {errorCategories.message}</div>
+                        <div className="mb-6 text-red-500">加载分类失败: {errorCategories.message}</div>
                     ) : (
                     <div className="mb-6 flex flex-wrap gap-2">
                         <button
                             onClick={() => handleCategoryClick('all')}
-                            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${ 
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                                 selectedCategory === 'all' && selectedTag === 'all'
-                                ? 'bg-indigo-600 text-white shadow-md' 
-                                : 'bg-gray-700/50 hover:bg-gray-600/80 text-gray-200'
+                                ? 'bg-blue-500/90 text-white shadow-md'
+                                : 'bg-gray-100/90 hover:bg-gray-200/90 text-gray-700 border border-gray-200/50'
                             }`}
                         >
                             全部
@@ -106,10 +103,10 @@ const ToolsPage: React.FC = () => {
                             <button
                                 key={category.id}
                                 onClick={() => handleCategoryClick(category.id)}
-                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${ 
+                                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                                     selectedCategory === category.id && selectedTag === 'all'
-                                    ? 'bg-indigo-600 text-white shadow-md' 
-                                    : 'bg-gray-700/50 hover:bg-gray-600/80 text-gray-200'
+                                    ? 'bg-blue-500/90 text-white shadow-md'
+                                    : 'bg-gray-100/90 hover:bg-gray-200/90 text-gray-700 border border-gray-200/50'
                                 }`}
                             >
                                 {category.name}
@@ -121,17 +118,17 @@ const ToolsPage: React.FC = () => {
                     {/* 标签按钮区域 - 使用 Hook 返回的 allTags */}
                     {/* 添加 allTags 加载和错误处理 */} 
                     {isLoadingTags ? (
-                        <div className="mb-8 text-gray-400">加载标签中...</div>
+                        <div className="mb-8 text-gray-700">加载标签中...</div>
                     ) : errorTags ? (
-                         <div className="mb-8 text-red-400">加载标签失败: {errorTags.message}</div>
+                         <div className="mb-8 text-red-500">加载标签失败: {errorTags.message}</div>
                     ) : allTags.length > 0 && (
                         <div className="mb-8 flex flex-wrap gap-2">
                             <button
                                 onClick={() => handleTagClick('all')}
-                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${ 
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                                     selectedTag === 'all'
-                                    ? 'bg-teal-600 text-white shadow' 
-                                    : 'bg-gray-600/60 hover:bg-gray-500/80 text-gray-300'
+                                    ? 'bg-teal-500/90 text-white shadow-md'
+                                    : 'bg-gray-100/90 hover:bg-gray-200/90 text-gray-700 border border-gray-200/50'
                                 }`}
                             >
                                 # 所有标签
@@ -140,10 +137,10 @@ const ToolsPage: React.FC = () => {
                                 <button
                                     key={tag} 
                                     onClick={() => handleTagClick(tag)}
-                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${ 
+                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                                         selectedTag === tag 
-                                        ? 'bg-teal-600 text-white shadow' 
-                                        : 'bg-gray-600/60 hover:bg-gray-500/80 text-gray-300'
+                                        ? 'bg-teal-500/90 text-white shadow-md'
+                                        : 'bg-gray-100/90 hover:bg-gray-200/90 text-gray-700 border border-gray-200/50'
                                     }`}
                                 >
                                     # {tag}
@@ -155,12 +152,10 @@ const ToolsPage: React.FC = () => {
                     {/* 工具列表区域 - 使用合并的 isLoading 和 error */} 
                     {isLoading && (
                         <div className="flex justify-center items-center h-screen" style={{
-                          backgroundColor: 'var(--bg-base-color)',
-                          backgroundImage: 'var(--bg-gradient)',
                           width: '100%',
                           height: '100vh',
                         }}>
-                          <svg className="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin h-10 w-10 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
@@ -169,7 +164,7 @@ const ToolsPage: React.FC = () => {
 
                     {/* 显示合并后的错误 */} 
                     {error && !isLoading && (
-                        <div className="text-center py-10 bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded relative" role="alert">
+                        <div className="text-center py-10 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
                             <strong className="font-bold">出错啦！</strong>
                             <span className="block sm:inline"> {error}</span>
                         </div>
@@ -178,7 +173,7 @@ const ToolsPage: React.FC = () => {
                     {/* 使用 Hook 返回的 tools */} 
                     {!isLoading && !error && tools.length === 0 && (
                         <div className="text-center py-10">
-                            <p className="text-gray-400">暂时还没有工具哦。</p>
+                            <p className="text-gray-500">暂时还没有工具哦。</p>
                         </div>
                     )}
 
@@ -188,14 +183,14 @@ const ToolsPage: React.FC = () => {
                                 <div 
                                     key={tool.id} 
                                     onClick={() => handleToolClick(tool.slug)}
-                                    className="cursor-pointer bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-4 hover:bg-white/20 transition-colors duration-200 shadow-sm hover:shadow-md"
+                                    className="cursor-pointer bg-gray-100 border border-gray-200 rounded-lg p-4 hover:bg-gray-200 transition-colors duration-200 shadow-sm hover:shadow-lg"
                                 >
-                                    <h3 className="text-base font-semibold text-white mb-1 truncate" title={tool.name}>{tool.name}</h3>
-                                    <p className="text-xs text-gray-300 line-clamp-2" title={tool.description}>{tool.description}</p>
+                                    <h3 className="text-base font-semibold text-gray-800 mb-1 truncate" title={tool.name}>{tool.name}</h3>
+                                    <p className="text-xs text-gray-600 line-clamp-2" title={tool.description}>{tool.description}</p>
                                      {tool.tags && tool.tags.length > 0 && (
                                          <div className="mt-2 flex flex-wrap gap-1">
                                              {tool.tags.slice(0, 3).map(tag => (
-                                                 <span key={tag} className="text-xs bg-teal-600/70 text-teal-100 px-1.5 py-0.5 rounded-full">
+                                                 <span key={tag} className="text-xs bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full">
                                                      # {tag}
                                                  </span>
                                              ))}

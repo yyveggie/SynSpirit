@@ -85,20 +85,16 @@ export const useArticleDetails = (slug: string | undefined, token: string | null
 
     const fetchArticleDetailsAPI = async () => {
         if (!slug) throw new Error("无效的文章标识符");
-        console.log(`[useArticleDetails] Fetching data for article slug: ${slug}`);
         const headers: { [key: string]: string } = {};
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
         const apiUrl = `${API_BASE_URL}/api/articles/slug/${slug}`;
-        console.log(`[useArticleDetails][DEBUG] Fetching Article from: ${apiUrl}`);
         try {
         const response = await axios.get<Article>(apiUrl, { headers });
-        console.log("[useArticleDetails] Article Data:", response.data);
         return response.data;
         } catch (error: any) {
             if (error.response && error.response.status === 429) {
-                console.error("[useArticleDetails] Rate limit exceeded (429)");
                 // 将错误信息添加到错误对象，方便UI层处理
                 const rateError = new Error("请求频率过高，请稍后再试");
                 rateError.name = "RateLimitExceeded";
@@ -173,7 +169,6 @@ export const useLikeArticle = (slug: string | undefined) => {
                 
                 if (!actionIdToDelete) {
                     // 查询点赞记录获取action_id
-                    console.log('[useLikeArticle] No action_id provided, fetching from API');
                     try {
                         // 首先尝试获取文章详情
                         const response = await axios.get(
@@ -181,16 +176,13 @@ export const useLikeArticle = (slug: string | undefined) => {
                             { headers }
                         );
                         actionIdToDelete = response.data.like_action_id;
-                        console.log(`[useLikeArticle] Found action_id from article details: ${actionIdToDelete}`);
                     } catch (error) {
-                        console.error('[useLikeArticle] Failed to fetch action_id:', error);
                         throw new Error('无法获取操作ID');
                     }
                 }
                 
                 // --- 取消点赞 --- 
                 if (actionIdToDelete) {
-                    console.log(`[useLikeArticle] Attempting to DELETE action ID: ${actionIdToDelete}`);
                     await axios.delete(`${API_BASE_URL}/api/actions/${actionIdToDelete}`, { headers });
                 } else {
                     throw new Error('未找到点赞记录ID');
@@ -202,7 +194,6 @@ export const useLikeArticle = (slug: string | undefined) => {
                     target_type: 'article',
                     target_id: articleId,
                 };
-                console.log('[useLikeArticle] Attempting to POST action:', payload);
                 await axios.post(`${API_BASE_URL}/api/actions`, payload, { headers });
             }
         },
@@ -228,19 +219,12 @@ export const useLikeArticle = (slug: string | undefined) => {
                         : oldData.like_count + 1
                 };
                 
-                console.log('[useLikeArticle] Optimistic update:', {
-                    oldState: { is_liked: oldData.is_liked, like_count: oldData.like_count },
-                    newState: { is_liked: newState.is_liked, like_count: newState.like_count }
-                });
-                
                 return newState;
             });
             
             return { previousState };
         },
         onError: (err, variables, context) => {
-            // --- 错误处理 --- 
-            console.error("[useLikeArticle Mutation Error]:", err);
             toast.error('点赞操作失败');
             
             // 恢复原状态
@@ -249,13 +233,6 @@ export const useLikeArticle = (slug: string | undefined) => {
             }
         },
         onSettled: () => {
-            // 完全移除缓存无效化逻辑，让组件自己处理状态
-            // 不再调用queryClient.invalidateQueries
-            console.log("[useLikeArticle Settled] Skip invalidating queries to prevent refresh loops");
-            
-            // --- 添加: 强制刷新文章详情数据 ---
-            // 使用强制刷新方式而不是invalidateQueries，避免循环刷新
-            console.log("[useLikeArticle Settled] Forcing article details refetch");
             queryClient.refetchQueries({ queryKey: queryKey });
         },
     });
@@ -277,8 +254,6 @@ export const useCollectArticle = (slug: string | undefined) => {
                 let actionIdToDelete = currentActionId;
                 
                 if (!actionIdToDelete) {
-                    // 查询收藏记录获取action_id
-                    console.log('[useCollectArticle] No action_id provided, fetching from API');
                     try {
                         // 首先尝试获取文章详情
                         const response = await axios.get(
@@ -286,16 +261,13 @@ export const useCollectArticle = (slug: string | undefined) => {
                             { headers }
                         );
                         actionIdToDelete = response.data.collect_action_id;
-                        console.log(`[useCollectArticle] Found action_id from article details: ${actionIdToDelete}`);
                     } catch (error) {
-                        console.error('[useCollectArticle] Failed to fetch action_id:', error);
                         throw new Error('无法获取操作ID');
                     }
                 }
                 
                 // --- 取消收藏 --- 
                 if (actionIdToDelete) {
-                    console.log(`[useCollectArticle] Attempting to DELETE action ID: ${actionIdToDelete}`);
                     await axios.delete(`${API_BASE_URL}/api/actions/${actionIdToDelete}`, { headers });
                 } else {
                     throw new Error('未找到收藏记录ID');
@@ -307,7 +279,6 @@ export const useCollectArticle = (slug: string | undefined) => {
                     target_type: 'article',
                     target_id: articleId,
                 };
-                console.log('[useCollectArticle] Attempting to POST action:', payload);
                 await axios.post(`${API_BASE_URL}/api/actions`, payload, { headers });
             }
         },
@@ -332,20 +303,13 @@ export const useCollectArticle = (slug: string | undefined) => {
                         ? Math.max(0, oldData.collect_count - 1)
                         : oldData.collect_count + 1
                 };
-                
-                console.log('[useCollectArticle] Optimistic update:', {
-                    oldState: { is_collected: oldData.is_collected, collect_count: oldData.collect_count },
-                    newState: { is_collected: newState.is_collected, collect_count: newState.collect_count }
-                });
-                
+                                
                 return newState;
             });
             
             return { previousState };
         },
         onError: (err, variables, context) => {
-            // --- 错误处理 --- 
-            console.error("[useCollectArticle Mutation Error]:", err);
             toast.error('收藏操作失败');
             
             // 恢复原状态
@@ -354,13 +318,6 @@ export const useCollectArticle = (slug: string | undefined) => {
             }
         },
         onSettled: () => {
-            // 完全移除缓存无效化逻辑，让组件自己处理状态
-            // 不再调用queryClient.invalidateQueries
-            console.log("[useCollectArticle Settled] Skip invalidating queries to prevent refresh loops");
-            
-            // --- 添加: 强制刷新文章详情数据 ---
-            // 使用强制刷新方式而不是invalidateQueries，避免循环刷新
-            console.log("[useCollectArticle Settled] Forcing article details refetch");
             queryClient.refetchQueries({ queryKey: queryKey });
         },
     });

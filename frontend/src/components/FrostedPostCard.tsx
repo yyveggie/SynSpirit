@@ -167,7 +167,7 @@ const FrostedPostCard: React.FC<FrostedPostCardProps> = ({ post, parentType, par
   return (
     <div 
       className="rounded-lg overflow-hidden 
-                 bg-gray-900/50 backdrop-blur-lg 
+                 bg-gray-100
                  shadow-lg hover:shadow-xl 
                  transform transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1
                  flex flex-col"
@@ -184,15 +184,15 @@ const FrostedPostCard: React.FC<FrostedPostCardProps> = ({ post, parentType, par
           <a 
             href={postUrl} 
             onClick={openInNewTabWithPreload(postUrl)}
-            className="hover:text-blue-300 transition-colors mb-2 block cursor-pointer"
+            className="hover:text-blue-600 transition-colors mb-2 block cursor-pointer"
             title={post.title} 
           >
-            <h3 className="text-lg font-semibold text-white line-clamp-1">{post.title}</h3> {/* 限制标题只显示一行 */}
+            <h3 className="text-lg font-semibold text-black line-clamp-1">{post.title}</h3>
           </a>
           
         {/* 直接显示完整内容 */}
         {postContent && (
-          <div className="text-gray-300 text-sm my-4 post-content-container">
+          <div className="text-gray-700 text-sm my-4 post-content-container">
             <style>{`
               .post-content-container img, 
               .post-content-container video,
@@ -243,7 +243,7 @@ const FrostedPostCard: React.FC<FrostedPostCardProps> = ({ post, parentType, par
         
         {/* 底部作者信息和互动数据 */}
         <div className="flex justify-between items-end mt-4">
-          <div className="flex gap-3 text-xs text-gray-400">
+          <div className="flex gap-3 text-xs text-gray-500">
         {likesCount !== undefined && (
           <div className="flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -280,7 +280,7 @@ const FrostedPostCard: React.FC<FrostedPostCardProps> = ({ post, parentType, par
           </div>
         )}
           </div>
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-gray-500">
             <span>由 {getAuthorName()} 发布于 {formatDate(post.created_at || post.timestamp)}</span>
           </div>
         </div>
