@@ -23,5 +23,6 @@ dump.rdb
 .celery_pid
 .cursor/
 migrations/
+backend/migrations/
 plan/
 docs/
