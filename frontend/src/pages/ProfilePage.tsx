@@ -1449,7 +1449,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                         }}
                         title="点击编辑昵称"
                       >
-                        <div className="flex items-center">
+                      <div className="flex items-center">
                           <h1 className="text-4xl md:text-5xl font-bold text-black inline break-all py-1">
                             {userData.nickname || <span className="italic text-gray-400">未设置昵称</span>}
                           </h1>
@@ -1458,7 +1458,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                               <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
                           </span>
-                        </div>
+                      </div>
                       </div>
                     )}
                     {!isOwnProfile && !isEditingNickname && (
@@ -1468,18 +1468,18 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                           <h1 className="text-4xl md:text-5xl font-bold text-black inline break-all py-1">
                             {userData.nickname || <span className="italic text-gray-400">未设置昵称</span>}
                           </h1>
-                        </div>
+                    </div>
                       </div>
                     )}
                     {/* --- END REPLACEMENT --- */}
-
+                    
                     {/* --- NICKNAME EDITING STATE --- */}
                     {isOwnProfile && isEditingNickname && (
                       <div className="mb-0 relative"> {/* Changed mb-1 to mb-0 */}
-                        <input
-                          type="text"
-                          value={nicknameInput}
-                          onChange={(e) => setNicknameInput(e.target.value)}
+                                <input 
+                                    type="text"
+                                    value={nicknameInput}
+                                    onChange={(e) => setNicknameInput(e.target.value)}
                           onBlur={() => {
                             if (!isSavingNickname) {
                               handleSaveNickname();
@@ -1487,18 +1487,18 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                           }}
                           onKeyDown={handleNicknameEditKeyDown}
                           className="text-4xl md:text-5xl font-bold text-black bg-transparent focus:outline-none border-b-2 border-indigo-500 w-full py-1"
-                          placeholder="设置您的昵称"
-                          maxLength={50}
+                                    placeholder="设置您的昵称"
+                                    maxLength={50}
                           autoFocus
-                          disabled={isSavingNickname}
+                                    disabled={isSavingNickname}
                         />
                         {isSavingNickname && <span className="text-xs text-gray-400 absolute right-0 -bottom-5">保存中...</span>}
-                      </div>
-                    )}
+                            </div>
+                )}
                     {/* Display nickname error if any, and not currently saving */}
                     {nicknameError && !isSavingNickname && <p className="text-xs text-red-400 mt-1 mb-0">{nicknameError}</p>} {/* Changed mb-1 to mb-0 */}
                     {/* --- END NICKNAME EDITING STATE --- */}
-                    
+
                     <p className="text-sm text-gray-400 mb-0">{userData.id ? `用户 ID: ${userData.id} · 用户自 ${new Date(userData.created_at).toLocaleDateString('zh-CN')} 加入` : ""}</p>
 
                     {/* --- 修改：Bio 编辑区域 (这部分将被移动到 'introduction' 标签页) --- */}
@@ -1579,14 +1579,14 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ isMe }) => {
                        key={tab}
                        onClick={() => setActiveTab(tab as any)} // Cast 'tab' to any to satisfy the more specific type of setActiveTab temporarily
                        className={`whitespace-nowrap pb-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200 
-                         ${activeTab === tab
+                         ${activeTab === tab 
                       ? 'border-indigo-600 text-black'
                       : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-400'}`}
-                  >
+                >
                        {/* --- 修改：调整标签文本获取逻辑 --- */}
                        {tab === 'articles' ? '文 章' : tab === 'posts' ? '帖 子' : tab === 'dynamics' ? '动 态' : tab === 'series' ? '系 列' : '未知标签'}
                        {/* --- 结束修改 --- */}
-                  </button>
+                </button>
                   ))}
               </nav>
             </div>

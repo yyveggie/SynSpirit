@@ -564,9 +564,9 @@ body.is-scrolling .interactive-element {
 
 /* 视频大小限制 - 适用于文章 */
 .article-content iframe {
-  max-width: 80% !important;
-  margin: 0 auto !important;
   display: block !important;
+  margin: 0 auto !important;
+  width: 100% !important;
 }
 
 /* 带外边距的视频容器 - 适用于文章 */

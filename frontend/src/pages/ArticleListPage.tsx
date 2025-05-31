@@ -1,6 +1,5 @@
 /**
  * 
- * 注意: 导航栏组件(Navbar和SideNavbar)已移至全局布局，不需要在页面组件中引入
  * ArticleListPage.tsx
  * 
  * 此文件定义了展示文章列表页面的 React 组件。
@@ -277,39 +276,94 @@ const ArticleListPage: React.FC = () => {
               </div>
             ) : articles.length > 0 ? (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {articles.map((article: Article) => (
-                    <Link 
-                      to={`/article/${article.slug}`} 
+                    <div 
                       key={article.id} 
-                      className="block bg-gray-850/70 hover:bg-gray-800/90 backdrop-blur-lg border border-gray-700/50 rounded-lg overflow-hidden shadow-lg transition-all duration-200 group"
+                      className="mx-auto max-w-lg w-full overflow-hidden rounded-lg bg-white shadow-lg transition-all duration-200 hover:shadow-xl flex flex-col h-[380px]"
                     >
-                      {article.cover_image && (
-                        <div className="h-40 w-full overflow-hidden">
-                          <img 
-                            src={getImageUrl(article.cover_image) ?? '/placeholder.jpg'} // Added fallback
-                            alt={article.title} 
-                            className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
-                            onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.jpg'; }}
-                          />
-                        </div>
-                      )}
-                      <div className="p-3 flex flex-col flex-grow">
-                          <h3 
-                          className="text-base font-semibold text-black mb-1.5 line-clamp-2 group-hover:text-black"
-                            title={article.title}
-                          >
-                            {article.title}
-                          </h3>
-                        <p className={`text-xs text-black mb-3 flex-grow ${article.cover_image ? 'line-clamp-3' : 'line-clamp-6'}`}>
-                            {article.content || '无内容'}
-                          </p>
-                        <div className="flex justify-between items-center text-xs text-black mt-auto pt-1.5 border-t border-gray-700/50">
-                            <span>{article.author?.nickname || article.author?.email?.split('@')[0] || '匿名'}</span>
-                            <div>{formatDate(article.created_at)}</div>
-                        </div>
-                      </div>
-                    </Link>
+                      <Link to={`/article/${article.slug}`} className="flex flex-col h-full overflow-hidden">
+                        {article.cover_image ? (
+                          <>
+                            <div className="h-40 w-full overflow-hidden flex-shrink-0">
+                              <img 
+                                src={getImageUrl(article.cover_image) ?? '/placeholder.jpg'}
+                                alt={article.title} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.jpg'; }}
+                              />
+                            </div>
+                            <div className="p-4 flex flex-col flex-grow overflow-hidden">
+                              <p className="mb-1 text-sm text-blue-600 flex-shrink-0">
+                                {article.author?.nickname || article.author?.email?.split('@')[0] || '匿名'} • <time>{formatDate(article.created_at)}</time>
+                              </p>
+                              <h3 
+                                className="text-xl font-medium text-gray-900 mb-1 line-clamp-2 flex-shrink-0"
+                                title={article.title}
+                              >
+                                {article.title}
+                              </h3>
+                              <p className="mt-1 text-gray-600 text-sm line-clamp-3 flex-grow mb-2 overflow-hidden">
+                                {article.summary || (article.content ? article.content.substring(0, 120) + (article.content.length > 120 ? '...' : '') : '') || '无可用预览'} 
+                              </p>
+                              <div className="mt-auto pt-2 border-t border-gray-200 flex-shrink-0">
+                                {article.tags && article.tags.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {article.tags.slice(0, 3).map((tag, index) => (
+                                      <span 
+                                        key={index} 
+                                        className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-blue-600"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                    {article.tags.length > 3 && (
+                                      <span className="text-xs text-gray-400 self-center ml-1">...</span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="h-[22px]">&nbsp;</div> 
+                                )}
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="p-4 flex flex-col h-full overflow-hidden">
+                            <p className="mb-1 text-sm text-blue-600 flex-shrink-0">
+                              {article.author?.nickname || article.author?.email?.split('@')[0] || '匿名'} • <time>{formatDate(article.created_at)}</time>
+                            </p>
+                            <h3 
+                              className="text-xl font-medium text-gray-900 mb-1 line-clamp-2 flex-shrink-0"
+                              title={article.title}
+                            >
+                              {article.title}
+                            </h3>
+                            <p className="mt-1 text-gray-600 text-sm line-clamp-6 flex-grow mb-2 overflow-hidden">
+                              {article.summary || (article.content ? article.content.substring(0, 250) + (article.content.length > 250 ? '...' : '') : '') || '无可用预览'} 
+                            </p>
+                            <div className="mt-auto pt-2 border-t border-gray-200 flex-shrink-0">
+                              {article.tags && article.tags.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {article.tags.slice(0, 3).map((tag, index) => (
+                                    <span 
+                                      key={index} 
+                                      className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-blue-600"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                  {article.tags.length > 3 && (
+                                    <span className="text-xs text-gray-400 self-center ml-1">...</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="h-[22px]">&nbsp;</div> 
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </Link>
+                    </div>
                   ))}
                 </div>
 

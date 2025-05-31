@@ -38,6 +38,10 @@ class Comment(db.Model):
     is_deleted = db.Column(db.Boolean, nullable=False, default=False, server_default=text('false'))
     # --- 结束新增 ---
     
+    # --- 新增 is_edited 字段 ---
+    is_edited = db.Column(db.Boolean, nullable=False, default=False, server_default=text('false'))
+    # --- 结束新增 ---
+    
     # --- 新增：点赞计数字段 ---
     likes_count = db.Column(db.Integer, default=0, nullable=False, index=True)
     # --- 结束新增 ---
@@ -88,7 +92,8 @@ class Comment(db.Model):
             'like_count': self.likes_count,
             'is_liked_by_current_user': is_liked,
             'is_deleted': getattr(self, 'is_deleted', False),
-            'is_ai_generated': getattr(self, 'is_ai_generated', False)
+            'is_ai_generated': getattr(self, 'is_ai_generated', False),
+            'is_edited': getattr(self, 'is_edited', False)
         }
 
         if include_replies:

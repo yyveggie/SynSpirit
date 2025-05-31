@@ -5,12 +5,32 @@ import { useAuth } from '../context/AuthContext';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTopicDetails, useTopicPosts, useToggleTopicFavorite } from '../hooks/useTopicQueries';
+import { useLikePost, useCollectPost, useSharePost } from '../hooks/usePostQueries';
+import ShareDynamicModal from '../components/ShareDynamicModal';
+import { AxiosError } from 'axios';
+
+// Define Post type locally if not available from a central types file
+// This should ideally match the structure returned by useTopicPosts
+interface Post {
+  id: number;
+  title: string;
+  slug: string;
+  author: any; // Consider defining a more specific Author type
+  content?: string;
+  summary?: string;
+  excerpt?: string;
+  created_at?: string;
+  // Interaction states and counts - ensure these are part of the data from useTopicPosts
+  is_liked?: boolean;
+  is_collected?: boolean;
+  likes_count?: number;
+  collects_count?: number;
+  comments_count?: number;
+  shares_count?: number;
+  // Add other fields from your actual Post structure if needed
+}
 
 /**
- * 
- * 注意: 导航栏组件(Navbar和SideNavbar)已移至全局布局，不需要在页面组件中引入
- * CommunityTopicPage.tsx
- * 
  * 功能注释：
  * 定义特定主题社区页面的 React 组件。
  * 负责协调数据获取、状态管理和 UI 渲染。
@@ -50,11 +70,19 @@ const CommunityTopicPage: React.FC = () => {
     error: postsError
   } = useTopicPosts(topicSlug);
 
-  // Extract posts from postsData
-  const posts = postsData?.posts || [];
+  // Extract posts from postsData and explicitly type it
+  const posts: Post[] = postsData?.posts || [];
 
   // --- Instantiate Mutation Hook ---
   const toggleFavoriteMutation = useToggleTopicFavorite(); 
+  const likePostMutation = useLikePost();
+  const collectPostMutation = useCollectPost();
+  const sharePostMutation = useSharePost();
+
+  // --- State for Share Modal ---
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [sharingPost, setSharingPost] = useState<Post | null>(null);
+  const [shareComment, setShareComment] = useState('');
 
   // Determine overall loading and error states based on hooks
   const isLoadingPage = loadingTopic; // Primarily depends on topic details loading
@@ -104,6 +132,82 @@ const CommunityTopicPage: React.FC = () => {
     }
   }, [navigate, topicDetails]);
 
+  // --- Placeholder Handlers for Post Interactions ---
+  const handlePostLikeToggle = useCallback((postId: number) => {
+    console.log(`Toggling like for post ${postId}`);
+    const post = posts.find(p => p.id === postId);
+    if (!post || !token || !topicSlug) return;
+
+    likePostMutation.mutate({
+      postId,
+      token,
+      currentLikeState: post.is_liked || false,
+      currentLikeActionId: null, // Assuming not strictly needed by the new API, or pass if available
+      postSlug: post.slug || '', // Ensure post.slug is available
+      topicSlugForList: topicSlug,
+    });
+  }, [posts, token, topicSlug, likePostMutation, queryClient]);
+
+  const handlePostCollectToggle = useCallback((postId: number) => {
+    console.log(`Toggling collect for post ${postId}`);
+    const post = posts.find(p => p.id === postId);
+    if (!post || !token || !topicSlug) return;
+
+    collectPostMutation.mutate({
+      postId,
+      token,
+      currentCollectState: post.is_collected || false,
+      currentCollectActionId: null, // Assuming not strictly needed, or pass if available
+      postSlug: post.slug || '', // Ensure post.slug is available
+      topicSlugForList: topicSlug,
+    });
+  }, [posts, token, topicSlug, collectPostMutation, queryClient]);
+
+  const handlePostCommentClick = useCallback((postId: number) => {
+    console.log(`Navigating to comments for post ${postId}`);
+    if (topicSlug) {
+      const postIdentifier = posts.find(p => p.id === postId)?.slug || postId.toString();
+      navigate(`/community/topic/${topicSlug}/posts/${postIdentifier}`);
+    }
+  }, [navigate, topicSlug, posts]);
+
+  const handlePostShareClick = useCallback((postId: number) => {
+    console.log(`Sharing post ${postId}`);
+    const postToShare = posts.find(p => p.id === postId);
+    if (postToShare) {
+      setSharingPost(postToShare);
+      setShareComment(''); // Reset comment
+      setIsShareModalOpen(true);
+    }
+  }, [posts]);
+
+  // --- Share Submit Handler ---
+  const handleShareSubmit = async (comment: string, images?: string[]) => {
+    if (!sharingPost || !token || !topicSlug) {
+      // Maybe show a toast error
+      console.error('Share submission failed: missing sharingPost, token, or topicSlug');
+      return;
+    }
+
+    sharePostMutation.mutate({
+      postId: sharingPost.id,
+      token,
+      content: comment,
+      images,
+      topicSlugForList: topicSlug,
+      postSlug: sharingPost.slug || '',
+    }, {
+      onSuccess: () => {
+        setIsShareModalOpen(false);
+        setSharingPost(null);
+        // Toast is handled by the hook
+      },
+      onError: () => {
+        // Toast is handled by the hook, modal can remain open or close based on UX preference
+      }
+    });
+  };
+
   return (
     <>
       <CommunityContentPageLayout
@@ -121,7 +225,30 @@ const CommunityTopicPage: React.FC = () => {
         onCreatePost={handleCreatePost}
         showChatButton={true}
         isChatAvailable={true}
+        // Pass the new handlers down
+        onPostLikeToggle={handlePostLikeToggle}
+        onPostCollectToggle={handlePostCollectToggle}
+        onPostCommentClick={handlePostCommentClick}
+        onPostShareClick={handlePostShareClick}
       />
+      {/* Share Modal */}
+      {isShareModalOpen && sharingPost && (
+        <ShareDynamicModal
+          isOpen={isShareModalOpen}
+          onClose={() => {
+            setIsShareModalOpen(false);
+            setSharingPost(null);
+          }}
+          onSubmit={handleShareSubmit}
+          comment={shareComment}
+          setComment={setShareComment}
+          error={sharePostMutation.error ? (sharePostMutation.error as AxiosError<{ error?: string }>)?.response?.data?.error || (sharePostMutation.error as Error)?.message : null}
+          isLoading={sharePostMutation.isPending}
+          dynamicToShare={sharingPost} // Pass the whole post object
+          username={user?.nickname || user?.email?.split('@')[0] || '您'}
+          altText={`分享来自 ${sharingPost.author?.nickname || sharingPost.author?.email?.split('@')[0] || '用户'} 的帖子: ${sharingPost.title}`}
+        />
+      )}
     </>
   );
 };

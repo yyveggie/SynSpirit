@@ -67,8 +67,7 @@ def get_article_comments(article_id):
             joinedload(Comment.user) # 预加载作者
         ).filter(
             Comment.article_id == article_id,
-            Comment.parent_id == None, # 只获取顶级评论
-            Comment.is_deleted == False # <--- 新增过滤条件
+            Comment.parent_id == None # 只获取顶级评论
         )
 
         # --- 处理游标 --- 
@@ -197,8 +196,7 @@ def get_article_comments_tree(article_id):
         ).options(
             joinedload(Comment.user) 
         ).filter(
-            Comment.article_id == article_id,
-            Comment.is_deleted == False  # <--- 新增过滤条件
+            Comment.article_id == article_id
         ) # .order_by(Comment.created_at.asc()) # 获取所有，按创建时间升序排列 (移除旧的固定排序)
 
         # --- 新增：根据 sort_by 参数应用排序 ---
@@ -618,3 +616,100 @@ def delete_article_comment(article_id, comment_id):
         current_app.logger.error(f"软删除文章评论时出错 (Article ID: {article_id}, Comment ID: {comment_id}): {e}", exc_info=True)
         return jsonify({"error": f"删除评论失败: {str(e)}"}), 500
 # --- 结束新增 --- 
+
+# --- 新增：恢复已删除的文章评论 ---
+@comments_api_bp.route('/articles/<int:article_id>/comments/<int:comment_id>/restore', methods=['POST'])
+@jwt_required()
+def restore_article_comment(article_id, comment_id):
+    """恢复已软删除的文章评论（仅评论作者或管理员可操作）"""
+    try:
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({"error": "无法从令牌获取用户身份"}), 401
+
+        # 查找评论
+        comment = Comment.query.get(comment_id)
+        if not comment:
+            return jsonify({"error": "评论未找到"}), 404
+
+        # 检查评论是否属于指定文章
+        if comment.article_id != article_id:
+            return jsonify({"error": "评论不属于此文章"}), 400
+
+        # 权限检查
+        current_user = User.query.get(user_id)
+        if not current_user:
+             return jsonify({"error": "用户信息不存在"}), 401
+        if comment.user_id != user_id and not current_user.is_admin:
+            return jsonify({"error": "您没有权限恢复此评论"}), 403
+
+        # 检查评论是否已被删除
+        if not comment.is_deleted:
+             return jsonify({"message": "评论未被删除，无需恢复"}), 200
+             
+        # 执行恢复操作
+        comment.is_deleted = False
+        db.session.commit()
+        
+        current_app.logger.info(f"User {user_id} restored comment {comment_id} for article {article_id}")
+        return jsonify({"message": "评论已成功恢复"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"恢复文章评论时出错 (Article ID: {article_id}, Comment ID: {comment_id}): {e}", exc_info=True)
+        return jsonify({"error": f"恢复评论失败: {str(e)}"}), 500
+# --- 结束新增 ---
+
+# --- 新增：编辑文章评论 --- 
+@comments_api_bp.route('/articles/<int:article_id>/comments/<int:comment_id>', methods=['PUT'])
+@jwt_required()
+def update_article_comment(article_id, comment_id):
+    """更新文章评论（仅评论作者或管理员可操作）"""
+    try:
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({"error": "无法从令牌获取用户身份"}), 401
+
+        data = request.get_json()
+        if not data or 'content' not in data:
+            return jsonify({"error": "缺少更新内容"}), 400
+            
+        content = data['content'].strip()
+        if not content:
+            return jsonify({"error": "评论内容不能为空"}), 400
+
+        # 查找评论
+        comment = Comment.query.get(comment_id)
+        if not comment:
+            return jsonify({"error": "评论未找到"}), 404
+
+        # 检查评论是否属于指定文章
+        if comment.article_id != article_id:
+            return jsonify({"error": "评论不属于此文章"}), 400
+
+        # 权限检查
+        current_user = User.query.get(user_id)
+        if not current_user:
+             return jsonify({"error": "用户信息不存在"}), 401
+        if comment.user_id != user_id and not current_user.is_admin:
+            return jsonify({"error": "您没有权限编辑此评论"}), 403
+
+        if comment.is_deleted:
+             return jsonify({"error": "已删除的评论不能编辑"}), 400
+             
+        # 保存原始内容（可选，用于日志或历史记录）
+        original_content = comment.content
+        
+        # 更新评论内容
+        comment.content = content
+        comment.is_edited = True  # 标记为已编辑
+        db.session.commit()
+        
+        current_app.logger.info(f"User {user_id} edited comment {comment_id} for article {article_id}")
+        return jsonify(comment.to_dict(include_replies=False, current_user_id=user_id)), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"编辑文章评论时出错 (Article ID: {article_id}, Comment ID: {comment_id}): {e}", exc_info=True)
+        return jsonify({"error": f"编辑评论失败: {str(e)}"}), 500
+# --- 结束新增 ---

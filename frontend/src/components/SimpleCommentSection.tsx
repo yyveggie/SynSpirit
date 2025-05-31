@@ -46,7 +46,9 @@ interface Comment {
   likes_count: number;
   is_liked_by_current_user: boolean;
   is_deleted?: boolean;
+  is_edited?: boolean;
   replies?: Comment[];
+  is_ai_generated?: boolean;
 }
 
 interface CommentsResponse {
@@ -135,6 +137,7 @@ const CommentItem = memo(({
 }) => {
   const isDeleted = comment.is_deleted;
   const isAI = comment.user?.id === -1;
+  const isEdited = comment.is_edited;
   
   // 计算左边距
   const getMarginLeft = (level: number) => {
@@ -191,6 +194,9 @@ const CommentItem = memo(({
                 <span style={timeStyle}>
                   {formatDate(comment.created_at)}
                 </span>
+                {isEdited && (
+                  <span className="ml-1 text-xs text-gray-500 italic">(已编辑)</span>
+                )}
               </div>
               <div className="text-xs text-gray-900 break-words">
                 <TextWithLinks text={comment.content} />
@@ -345,6 +351,29 @@ const SimpleCommentSection: React.FC<SimpleCommentSectionProps> = ({
           
           // 通知系统所有评论已关闭
           window.dispatchEvent(new CustomEvent('all-comments-closed'));
+          
+          // 强制重置所有相关状态
+          setTimeout(() => {
+            // 再次确认移除 comments-open 类
+            document.body.classList.remove('comments-open');
+            
+            // 重置全局状态
+            delete document.body.dataset.lastCommentOpenTime;
+            delete document.body.dataset.lastOpenCommentId;
+            
+            // 获取动态栏元素并重置其样式
+            const dynamicFeed = document.getElementById('dynamic-feed');
+            const dynamicFeedContainer = document.querySelector('.dynamic-feed-container');
+            
+            if (dynamicFeed) {
+              dynamicFeed.classList.remove('force-reset');
+              dynamicFeed.classList.remove('reset-transform');
+              
+              if (dynamicFeedContainer) {
+                (dynamicFeedContainer as HTMLElement).classList.remove('reset-transform');
+              }
+            }
+          }, 150); // 添加延迟确保DOM更新
         }
       }
     };

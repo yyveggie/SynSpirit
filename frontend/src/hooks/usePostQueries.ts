@@ -66,7 +66,8 @@ interface LikePostVariables {
     token: string | null;
     currentLikeState: boolean; // 操作前的点赞状态
     currentLikeActionId: number | null;
-    postSlug: string; // 用于 queryKey
+    postSlug: string; // 用于 queryKey (通常是帖子详情的slug)
+    topicSlugForList?: string; // 新增：用于失效帖子列表缓存
 }
 
 const likePostAPI = async ({ postId, token, currentLikeState, currentLikeActionId }: LikePostVariables): Promise<ActionResponse> => {
@@ -128,13 +129,13 @@ export const useLikePost = () => {
         },
         // --- 修改 onSuccess --- 
         onSuccess: (data, variables) => {
-            const { postSlug, postId } = variables;
-            const queryKey = ['postDetails', postSlug];
+            const { postSlug, postId, topicSlugForList } = variables; // 解构 topicSlugForList
+            const queryKeyDetails = ['postDetails', postSlug];
             console.log('[onSuccess Like][usePostQueries] Received data from backend:', data);
 
-            queryClient.setQueryData<PostDetails>(queryKey, (oldData) => {
+            queryClient.setQueryData<PostDetails>(queryKeyDetails, (oldData) => {
                 if (oldData) {
-                    console.log('[onSuccess Like][usePostQueries] Updating cache for key:', queryKey);
+                    console.log('[onSuccess Like][usePostQueries] Updating cache for key:', queryKeyDetails);
                     
                     // 使用后端返回的点赞状态和计数
                     const isLiked = data.is_liked === undefined 
@@ -160,9 +161,16 @@ export const useLikePost = () => {
                     console.log('[onSuccess Like][usePostQueries] New data to set in cache:', updatedPost);
                     return updatedPost;
                 }
-                console.log('[onSuccess Like][usePostQueries] No oldData found in cache for key:', queryKey, 'Will not update cache directly here.');
+                console.log('[onSuccess Like][usePostQueries] No oldData found in cache for key:', queryKeyDetails, 'Will not update cache directly here.');
                 return oldData;
             });
+
+            // 使帖子列表缓存失效 (如果提供了 topicSlugForList)
+            if (topicSlugForList) {
+                const queryKeyList = ['topicPosts', topicSlugForList];
+                queryClient.invalidateQueries({ queryKey: queryKeyList });
+                console.log('[onSuccess Like][usePostQueries] Invalidated topicPosts query for key:', queryKeyList);
+            }
 
             // 修改toast消息以匹配新的响应格式
             toast.success(data.message || '操作成功！');
@@ -180,14 +188,19 @@ export const useLikePost = () => {
             // 如果后端返回的错误不代表需要回滚乐观更新，则可能需要 invalidate
         },
         onSettled: (data, error, variables) => {
-            const { postSlug } = variables;
-            const queryKey = ['postDetails', postSlug];
+            const { postSlug, topicSlugForList } = variables; // 解构 topicSlugForList
+            const queryKeyDetails = ['postDetails', postSlug];
             // onSettled 中仍然可以执行 invalidateQueries 以确保最终一致性
             // 特别是如果 onSuccess 中 setQueryData 的数据可能不完整
-            console.log("[onSettled Like][usePostQueries] Would have invalidated query for final consistency (now commented out):", queryKey);
-            // queryClient.invalidateQueries({ queryKey });
-             // 也可以考虑失效帖子列表缓存，如果列表也显示点赞状态/计数
-            // queryClient.invalidateQueries({ queryKey: ['posts'], exact: false });
+            // console.log("[onSettled Like][usePostQueries] Would have invalidated query for final consistency (now commented out):", queryKeyDetails);
+            // queryClient.invalidateQueries({ queryKey: queryKeyDetails });
+            
+            // 确保在 onSettled 中也尝试失效列表缓存，以覆盖所有情况 (例如 onSuccess 未执行或乐观更新失败)
+            if (topicSlugForList) {
+                const queryKeyList = ['topicPosts', topicSlugForList];
+                queryClient.invalidateQueries({ queryKey: queryKeyList });
+                console.log('[onSettled Like][usePostQueries] Invalidated topicPosts query in onSettled for key:', queryKeyList);
+            }
         },
     });
 };
@@ -199,7 +212,8 @@ interface CollectPostVariables {
     token: string | null;
     currentCollectState: boolean; // 操作前的收藏状态
     currentCollectActionId: number | null;
-    postSlug: string; // 用于 queryKey
+    postSlug: string; // 用于 queryKey (通常是帖子详情的slug)
+    topicSlugForList?: string; // 新增：用于失效帖子列表缓存
 }
 
 const collectPostAPI = async ({ postId, token, currentCollectState, currentCollectActionId }: CollectPostVariables): Promise<ActionResponse> => {
@@ -257,13 +271,13 @@ export const useCollectPost = () => {
         },
         // --- 修改 onSuccess --- 
         onSuccess: (data, variables) => {
-            const { postSlug, postId } = variables;
-            const queryKey = ['postDetails', postSlug];
+            const { postSlug, postId, topicSlugForList } = variables; // 解构 topicSlugForList
+            const queryKeyDetails = ['postDetails', postSlug];
             console.log('[onSuccess Collect][usePostQueries] Received data from backend:', data);
 
-            queryClient.setQueryData<PostDetails>(queryKey, (oldData) => {
+            queryClient.setQueryData<PostDetails>(queryKeyDetails, (oldData) => {
                 if (oldData) {
-                    console.log('[onSuccess Collect][usePostQueries] Updating cache for key:', queryKey);
+                    console.log('[onSuccess Collect][usePostQueries] Updating cache for key:', queryKeyDetails);
                     
                     // 使用后端返回的收藏状态和计数
                     const isCollected = data.is_collected === undefined 
@@ -289,11 +303,17 @@ export const useCollectPost = () => {
                     console.log('[onSuccess Collect][usePostQueries] New data to set in cache:', updatedPost);
                     return updatedPost;
                 }
-                console.log('[onSuccess Collect][usePostQueries] No oldData found in cache for key:', queryKey, 'Will not update cache directly here.');
+                console.log('[onSuccess Collect][usePostQueries] No oldData found in cache for key:', queryKeyDetails, 'Will not update cache directly here.');
                 return oldData;
             });
 
-            // 修改toast消息以匹配新的响应格式
+            // 使帖子列表缓存失效 (如果提供了 topicSlugForList)
+            if (topicSlugForList) {
+                const queryKeyList = ['topicPosts', topicSlugForList];
+                queryClient.invalidateQueries({ queryKey: queryKeyList });
+                console.log('[onSuccess Collect][usePostQueries] Invalidated topicPosts query for key:', queryKeyList);
+            }
+
             toast.success(data.message || '操作成功！');
         },
         onError: (error, variables, context) => {
@@ -307,11 +327,89 @@ export const useCollectPost = () => {
             toast.error(`收藏操作失败: ${backendError || error.message || '未知错误'}`);
         },
         onSettled: (data, error, variables) => {
-            const { postSlug } = variables;
-            const queryKey = ['postDetails', postSlug];
-            console.log("[onSettled Collect][usePostQueries] Would have invalidated query for final consistency (now commented out):", queryKey);
-            // queryClient.invalidateQueries({ queryKey });
-            // queryClient.invalidateQueries({ queryKey: ['posts'], exact: false });
+            const { postSlug, topicSlugForList } = variables; // 解构 topicSlugForList
+            const queryKeyDetails = ['postDetails', postSlug];
+            // console.log("[onSettled Collect][usePostQueries] Would have invalidated query for final consistency (now commented out):", queryKeyDetails);
+            // queryClient.invalidateQueries({ queryKey: queryKeyDetails });
+
+            // 确保在 onSettled 中也尝试失效列表缓存
+            if (topicSlugForList) {
+                const queryKeyList = ['topicPosts', topicSlugForList];
+                queryClient.invalidateQueries({ queryKey: queryKeyList });
+                console.log('[onSettled Collect][usePostQueries] Invalidated topicPosts query in onSettled for key:', queryKeyList);
+            }
+        },
+    });
+};
+
+// --- Share Post Mutation ---
+interface SharePostVariables {
+    postId: number;
+    token: string | null;
+    content?: string; // Optional share content/comment
+    images?: string[]; // Optional images for the share
+    topicSlugForList?: string; // For invalidating the post list cache
+    postSlug?: string; // For invalidating post details cache, if needed
+}
+
+const sharePostAPI = async ({ postId, token, content, images }: SharePostVariables): Promise<ActionResponse> => {
+    if (!token) throw new Error('需要认证');
+
+    const payload = {
+        action_type: 'share',
+        target_type: 'post',
+        target_id: postId,
+        content: content || '',
+        images: images || [],
+    };
+
+    const url = `${API_BASE_URL}/api/actions`;
+    console.log(`[API][usePostQueries] Attempting to share post ID: ${postId} with payload:`, payload);
+
+    const response = await axios.post(url, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+
+    console.log(`[API][usePostQueries] Share post response status: ${response.status}, data:`, response.data);
+
+    // Assuming 200 or 201 for successful share action
+    if (response.status !== 200 && response.status !== 201) {
+        const errorMsg = (response.data as any)?.error || '分享失败';
+        throw new Error(errorMsg);
+    }
+
+    return response.data;
+};
+
+export const useSharePost = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation<
+        ActionResponse, 
+        AxiosError<{ error?: string }>, 
+        SharePostVariables,
+        unknown // No specific context needed for optimistic updates here for now
+    >({
+        mutationFn: sharePostAPI,
+        onSuccess: (data, variables) => {
+            toast.success(data.message || '分享成功！');
+            const { topicSlugForList, postSlug } = variables;
+
+            if (topicSlugForList) {
+                const queryKeyList = ['topicPosts', topicSlugForList];
+                queryClient.invalidateQueries({ queryKey: queryKeyList });
+                console.log('[onSuccess Share][usePostQueries] Invalidated topicPosts query for key:', queryKeyList);
+            }
+            // Optionally invalidate post details if share count is shown there
+            if (postSlug) {
+                 const queryKeyDetails = ['postDetails', postSlug];
+                 queryClient.invalidateQueries({ queryKey: queryKeyDetails });
+                 console.log('[onSuccess Share][usePostQueries] Invalidated postDetails query for key:', queryKeyDetails);
+            }
+        },
+        onError: (error) => {
+            const backendError = error.response?.data?.error;
+            toast.error(`分享失败: ${backendError || error.message || '未知错误'}`);
         },
     });
 };

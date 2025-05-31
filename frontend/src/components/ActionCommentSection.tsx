@@ -3,13 +3,13 @@ import axios from 'axios';
 import { API_BASE_URL, DEFAULT_AVATAR } from '../config';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { FaHeart, FaRegHeart, FaSpinner, FaReply, FaTrashAlt } from 'react-icons/fa';
-import { BsArrowReturnRight, BsTrash } from 'react-icons/bs';
+import { FaSpinner } from 'react-icons/fa';
+import { BsArrowReturnRight } from 'react-icons/bs';
 import UserAvatar from './UserAvatar';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useMutation, useQueryClient, useQuery, QueryKey } from '@tanstack/react-query';
-import { RefreshCcw } from 'lucide-react';
+import { Refresh, TrashTwo, Heart, EditOne } from '@mynaui/icons-react';
 
 // --- 复用 DynamicDetailView 中的类型定义 (或单独定义) ---
 interface User {
@@ -38,6 +38,7 @@ interface ActionCommentData {
     likes_count?: number;
     is_liked?: boolean;
     is_ai_generated: boolean;
+    is_edited?: boolean;
 }
 
 // --- 新增：定义 API 响应的顶层结构 ---
@@ -65,6 +66,12 @@ interface CommentItemProps {
     handleLikeComment: (commentId: number, isLiked: boolean) => Promise<void>;
     scrollToCommentId?: number | null;
     onScrolledToComment?: () => void;
+    editingCommentId: number | null;
+    setEditingCommentId: (id: number | null) => void;
+    editContent: string;
+    setEditContent: (content: string) => void;
+    handleEditSubmit: (commentId: number) => Promise<void>;
+    submittingEdit: boolean;
 }
 
 // --- 复制 CommentItem 组件 (基本不变) ---
@@ -72,7 +79,8 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
     comment, currentUser, depth = 0, isLastReply = false, token, replyToCommentId, 
     setReplyToCommentId, replyContent, setReplyContent, handleReplySubmit, 
     submittingReply, formatCommentDate, handleDeleteComment, forceExpandCommentId, handleLikeComment,
-    scrollToCommentId, onScrolledToComment
+    scrollToCommentId, onScrolledToComment, editingCommentId, setEditingCommentId, editContent, setEditContent,
+    handleEditSubmit, submittingEdit
 }) => {
     // AI 评论的特殊处理
     const isAIReply = comment.is_ai_generated;
@@ -87,10 +95,13 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
     const indentStyle = { paddingLeft: `${depth * 1.5}rem` };
     const [isCollapsed, setIsCollapsed] = useState(depth >= 3); 
     const isReplying = replyToCommentId === comment.id;
-    // 修改：AI评论不能被删除
+    const isEditing = editingCommentId === comment.id;
+    // 修改：AI评论不能被删除，也不能被编辑
     const canDelete = currentUser && comment.user && currentUser.id === comment.user.id && !comment.is_deleted && !isAIReply;
+    const canEdit = canDelete && !isEditing && !comment.is_deleted;
     const hasReplies = comment.replies && comment.replies.length > 0;
     const replyBoxRef = useRef<HTMLDivElement>(null);
+    const editBoxRef = useRef<HTMLDivElement>(null);
     const commentItemRef = useRef<HTMLDivElement>(null);
     
     const [localIsLiked, setLocalIsLiked] = useState(comment.is_liked || false);
@@ -127,6 +138,13 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
         }
     };
 
+    // 处理点击编辑按钮
+    const onEditClick = () => {
+        if (!canEdit) return;
+        setEditingCommentId(comment.id);
+        setEditContent(comment.content);
+    };
+
     useEffect(() => {
         if (!isReplying) return;
         const handleClickOutside = (event: MouseEvent) => {
@@ -138,6 +156,19 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isReplying, setReplyToCommentId, setReplyContent]); // 添加 setReplyContent 到依赖数组
+
+    // 添加对编辑框的点击外部处理
+    useEffect(() => {
+        if (!isEditing) return;
+        const handleClickOutside = (event: MouseEvent) => {
+        if (editBoxRef.current && !editBoxRef.current.contains(event.target as Node)) {
+            setEditingCommentId(null);
+            setEditContent(''); // 清除编辑内容
+        }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isEditing, setEditingCommentId, setEditContent]);
 
     useEffect(() => {
         if (forceExpandCommentId === comment.id) {
@@ -161,6 +192,13 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
         }
     }, [isReplying]);
 
+    // 当编辑框打开时，滚动到编辑框使其可见
+    useEffect(() => {
+        if (isEditing && editBoxRef.current) {
+            editBoxRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [isEditing]);
+
     useEffect(() => {
         // 如果当前评论是指定要滚动到的评论
         if (comment.id === scrollToCommentId && commentItemRef.current) {
@@ -183,43 +221,112 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
                     <span className={`text-sm font-medium ${isAIReply ? 'text-purple-700' : (comment.user ? 'text-gray-900' : 'text-gray-500')}`}>
                         {displayName}
                     </span>
-                    <span className="text-gray-500 text-xs pt-0.5 ml-auto">{formatCommentDate(comment.created_at)}</span>
+                    <span className="text-gray-500 text-xs pt-0.5 ml-auto">
+                        {formatCommentDate(comment.created_at)}
+                        {comment.is_edited && <span className="ml-1 italic">(已编辑)</span>}
+                    </span>
                 </div>
                 <div className={`pl-8 ${hasReplies && isCollapsed ? 'pb-0' : (depth > 0 ? 'pb-1' : 'pb-1') }`}>
-                    <p className={`text-sm whitespace-pre-wrap break-words mb-1.5 ${comment.is_deleted ? 'text-gray-500 italic' : (isAIReply ? 'text-purple-800' : 'text-gray-900')}`}>{comment.content}</p>
-                    {!comment.is_deleted && (
-                        <div className="flex items-center space-x-3 text-xs mt-1">
+                    {isEditing ? (
+                        <div ref={editBoxRef} className="mt-1">
+                            <textarea 
+                                value={editContent} 
+                                onChange={(e) => setEditContent(e.target.value)}
+                                rows={3}
+                                className="w-full px-2 py-1.5 text-sm rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none bg-gray-100 text-gray-900 placeholder-gray-500"
+                                autoFocus
+                            />
+                            <div className="flex justify-end mt-1 space-x-2">
+                                <button 
+                                    onClick={() => setEditingCommentId(null)} 
+                                    className="text-xs px-2 py-1 rounded text-gray-600 hover:bg-gray-200"
+                                >
+                                    取消
+                                </button>
+                                <button 
+                                    onClick={() => handleEditSubmit(comment.id)}
+                                    disabled={!editContent.trim() || submittingEdit}
+                                    className="text-xs px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500"
+                                >
+                                    {submittingEdit ? <FaSpinner className="animate-spin h-3 w-3 inline mr-1" /> : null}
+                                    保存
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className={`text-sm whitespace-pre-wrap break-words mb-1.5 ${comment.is_deleted ? 'text-gray-500 italic' : (isAIReply ? 'text-purple-800' : 'text-gray-900')}`}>{comment.content}</p>
+                    )}
+                    {!comment.is_deleted && !isEditing && (
+                        <div className="flex items-center gap-3 mt-1">
+                            {/* 折叠按钮 */}
                             {hasReplies && (
                                 <button 
                                     onClick={() => setIsCollapsed(!isCollapsed)} 
-                                    className="text-xs text-blue-600 hover:text-blue-800 focus:outline-none min-w-[36px] text-left"
+                                    className="text-xs text-blue-600 hover:text-blue-800 focus:outline-none min-w-[36px]"
                                 >
                                     {isCollapsed ? `[+${totalRepliesCount}]` : '[-]'}
                                 </button>
                             )}
+                            
+                            {/* 回复按钮 - 更小尺寸 */}
                             <button 
                                 onClick={() => {
                                     if (isReplying) {
                                         setReplyToCommentId(null);
-                                        setReplyContent(''); // 关闭时清空内容
+                                        setReplyContent('');
                                     } else {
                                         setReplyToCommentId(comment.id);
                                     }
                                 }} 
-                                className="flex items-center text-gray-500 hover:text-blue-600 p-0.5 rounded"
+                                className="flex items-center justify-center text-gray-500 hover:text-blue-600 p-0.5 rounded w-4 h-4"
                             >
-                                <BsArrowReturnRight />
+                                <BsArrowReturnRight className="w-3 h-3" />
                             </button>
-                            <button onClick={onLikeClick} disabled={isLiking} className={`flex items-center p-0.5 rounded ${localIsLiked ? 'text-pink-500 hover:text-pink-400' : 'text-gray-400 hover:text-pink-400'}`}>
-                                {localIsLiked ? <FaHeart /> : <FaRegHeart />}
-                                <span 
-                                    className="ml-1 text-xs tabular-nums" 
-                                    style={{ visibility: localLikesCount > 0 ? 'visible' : 'hidden' }}
+                            
+                            {/* 点赞按钮和计数组合为一个单元 */}
+                            <div className="flex items-center">
+                                <button 
+                                    onClick={onLikeClick} 
+                                    disabled={isLiking} 
+                                    className="flex items-center justify-center text-gray-400 hover:text-red-400 p-0.5 rounded w-5 h-5"
                                 >
-                                    {localLikesCount > 0 ? localLikesCount : '0'}
-                                </span>
+                                    <div className="w-3.5 h-3.5 flex items-center justify-center">
+                                        <Heart 
+                                            className="w-full h-full" 
+                                            stroke="currentColor" 
+                                            fill={localIsLiked ? "#ef4444" : "none"} 
+                                            style={{color: localIsLiked ? "#ef4444" : undefined}}
+                                        />
+                                    </div>
+                                </button>
+                                {localLikesCount > 0 && (
+                                    <span className="text-xs tabular-nums ml-1">{localLikesCount}</span>
+                                )}
+                            </div>
+                            
+                            {/* 添加编辑按钮 */}
+                            {canEdit && (
+                                <button 
+                                    onClick={onEditClick} 
+                                    className="flex items-center justify-center text-gray-400 hover:text-blue-500 p-0.5 rounded w-5 h-5"
+                                >
+                                    <div className="w-3.5 h-3.5 flex items-center justify-center">
+                                        <EditOne className="w-full h-full" stroke="currentColor" />
+                                    </div>
+                                </button>
+                            )}
+                            
+                            {/* 删除按钮 */}
+                            {canDelete && (
+                                <button 
+                                    onClick={() => handleDeleteComment(comment.id)} 
+                                    className="flex items-center justify-center text-gray-400 hover:text-red-400 p-0.5 rounded w-5 h-5"
+                                >
+                                    <div className="w-3.5 h-3.5 flex items-center justify-center">
+                                        <TrashTwo className="w-full h-full" stroke="currentColor" fill="none" />
+                                    </div>
                             </button>
-                            {canDelete && <button onClick={() => handleDeleteComment(comment.id)} className="flex items-center text-gray-400 hover:text-red-400 p-0.5 rounded"><BsTrash /></button>}
+                            )}
                         </div>
                     )}
                     {/* 使用 framer-motion 包裹回复框 */}
@@ -282,6 +389,12 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
                             handleLikeComment={handleLikeComment}
                             scrollToCommentId={scrollToCommentId}
                             onScrolledToComment={onScrolledToComment}
+                            editingCommentId={editingCommentId}
+                            setEditingCommentId={setEditingCommentId}
+                            editContent={editContent}
+                            setEditContent={setEditContent}
+                            handleEditSubmit={handleEditSubmit}
+                            submittingEdit={submittingEdit}
                         />
                     ))}
                 </div>
@@ -312,6 +425,11 @@ const ActionCommentSection: React.FC<ActionCommentSectionProps> = memo(({ action
     const [refreshAnimationKey, setRefreshAnimationKey] = useState(0);
     const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
     const [scrollToCommentId, setScrollToCommentId] = useState<number | null>(null);
+    
+    // 添加编辑状态
+    const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+    const [editContent, setEditContent] = useState('');
+    const [submittingEdit, setSubmittingEdit] = useState(false);
 
     const formatCommentDate = (dateString: string) => { return new Date(dateString).toLocaleString('zh-CN'); };
 
@@ -502,6 +620,47 @@ const ActionCommentSection: React.FC<ActionCommentSectionProps> = memo(({ action
         }
     }, [setReplyToCommentId, setForceExpandCommentId]);
 
+    // --- 添加编辑评论的mutation ---
+    const editCommentMutation = useMutation<
+        ActionCommentData,
+        Error,
+        { commentId: number, content: string }
+    >({
+        mutationFn: async ({ commentId, content }) => {
+            const editUrl = `${API_BASE_URL}/api/comments/${commentId}`;
+            
+            const response = await axios.put<ActionCommentData>(
+                editUrl,
+                { content: content.trim() },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            return response.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['actionComments', actionId] });
+            setEditingCommentId(null);
+            setEditContent('');
+            toast.success('评论已更新');
+        },
+        onError: (err) => {
+            console.error("更新评论失败:", err);
+            toast.error(err.message || '更新评论失败');
+        },
+        onSettled: () => {
+            setSubmittingEdit(false);
+        }
+    });
+
+    // 处理提交编辑的函数
+    const handleSubmitEdit = async (commentId: number) => {
+        if (!token || !editContent.trim()) {
+            toast.warn("编辑内容不能为空且需要登录。");
+            return;
+        }
+        setSubmittingEdit(true);
+        await editCommentMutation.mutate({ commentId, content: editContent });
+    };
+
     const commentSectionClass = `border-0 bg-white ${isCommentBoxFocused ? 'focus-within:border-blue-400' : ''} transition-all`;
 
     return (
@@ -592,7 +751,7 @@ const ActionCommentSection: React.FC<ActionCommentSectionProps> = memo(({ action
                                     transition={{ duration: 0.4, ease: "linear" }}
                                     style={{ display: 'flex' }}
                                 >
-                                    <RefreshCcw className="h-4 w-4 block" />
+                                    <Refresh className="h-4 w-4 block" />
                                 </motion.div>
                             )}
                         </button>
@@ -639,6 +798,12 @@ const ActionCommentSection: React.FC<ActionCommentSectionProps> = memo(({ action
                                 scrollToCommentId={scrollToCommentId}
                                 onScrolledToComment={() => setScrollToCommentId(null)}
                                 isLastReply={index === comments.length - 1}
+                                editingCommentId={editingCommentId}
+                                setEditingCommentId={setEditingCommentId}
+                                editContent={editContent}
+                                setEditContent={setEditContent}
+                                handleEditSubmit={handleSubmitEdit}
+                                submittingEdit={submittingEdit}
                             />
                         ))}
                     </div>

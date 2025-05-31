@@ -564,3 +564,56 @@ def unlike_comment(comment_id):
 #         db.session.rollback()
 #         print(f"取消点赞动态评论 {comment_id} 失败: {e}")
 #         return jsonify({'error': f'取消点赞失败: {str(e)}'}), 500
+
+# --- 新增: 编辑动态评论 API ---
+@comments_bp.route('/<int:comment_id>', methods=['PUT'])
+@jwt_required()
+def update_action_comment(comment_id):
+    """更新动态评论（仅评论作者或管理员可操作）"""
+    try:
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({"error": "无法从令牌获取用户身份"}), 401
+
+        data = request.get_json()
+        if not data or 'content' not in data:
+            return jsonify({"error": "缺少更新内容"}), 400
+            
+        content = data['content'].strip()
+        if not content:
+            return jsonify({"error": "评论内容不能为空"}), 400
+
+        # 查找评论
+        comment = ActionComment.query.get(comment_id)
+        if not comment:
+            return jsonify({"error": "评论未找到"}), 404
+
+        # 权限检查
+        current_user = User.query.get(user_id)
+        if not current_user:
+             return jsonify({"error": "用户信息不存在"}), 401
+        if comment.user_id != user_id and not current_user.is_admin:
+            return jsonify({"error": "您没有权限编辑此评论"}), 403
+
+        if comment.is_deleted:
+             return jsonify({"error": "已删除的评论不能编辑"}), 400
+             
+        if comment.is_ai_generated:
+             return jsonify({"error": "AI生成的评论不能编辑"}), 400
+             
+        # 保存原始内容（可选，用于日志或历史记录）
+        original_content = comment.content
+        
+        # 更新评论内容
+        comment.content = content
+        comment.is_edited = True  # 标记为已编辑
+        db.session.commit()
+        
+        current_app.logger.info(f"User {user_id} edited action comment {comment_id}")
+        return jsonify(comment.to_dict()), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"编辑动态评论时出错 (Comment ID: {comment_id}): {e}", exc_info=True)
+        return jsonify({"error": f"编辑评论失败: {str(e)}"}), 500
+# --- 结束新增 ---

@@ -77,6 +77,12 @@ interface CommunityContentPageLayoutProps {
   showChatButton?: boolean; 
   isChatAvailable?: boolean; 
 
+  // Add new interaction handlers for posts
+  onPostLikeToggle: (postId: number) => void;
+  onPostCollectToggle: (postId: number) => void;
+  onPostCommentClick: (postId: number) => void;
+  onPostShareClick: (postId: number) => void;
+
   children?: ReactNode;
 }
 
@@ -95,6 +101,11 @@ const CommunityContentPageLayout: React.FC<CommunityContentPageLayoutProps> = ({
   onCreatePost = () => {},
   showChatButton = false,
   isChatAvailable = false,
+  // Destructure new props
+  onPostLikeToggle,
+  onPostCollectToggle,
+  onPostCommentClick,
+  onPostShareClick,
   children
 }) => {
   const { isSidebarOpen } = useSidebar(); // 使用 Context 获取状态
@@ -128,6 +139,11 @@ const CommunityContentPageLayout: React.FC<CommunityContentPageLayoutProps> = ({
                           post={post} 
                           parentType={parentType}
                           parentSlug={parentSlug}
+                          // Pass down the new handlers
+                          onLikeToggle={onPostLikeToggle}
+                          onCollectToggle={onPostCollectToggle}
+                          onCommentClick={onPostCommentClick}
+                          onShareClick={onPostShareClick}
                         />
                       ))
                     ) : (

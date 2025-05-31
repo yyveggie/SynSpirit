@@ -46,6 +46,8 @@ import { Share2 } from 'lucide-react';
 import type { AuthorProfile } from '../api/articleApi'; // Import AuthorProfile type
 import AuthorTooltip from './AuthorTooltip'; // 导入 AuthorTooltip
 import { formatDate } from '../utils/formatDate';
+// 导入新的图标
+import { Heart, Pin, Share as ShareIcon, Message } from "@mynaui/icons-react";
 
 // Define the structure for series article links passed as props
 interface SeriesArticleLink {
@@ -108,6 +110,26 @@ const updateGlobalCommentsCount = (increment: boolean) => {
       document.body.classList.remove('comments-open');
       // 立即触发全局事件通知所有评论已关闭
       window.dispatchEvent(new CustomEvent('all-comments-closed'));
+      
+      // 强制重置所有相关状态，确保在任何情况下都能恢复
+      setTimeout(() => {
+        document.body.classList.remove('comments-open');
+        delete document.body.dataset.lastCommentOpenTime;
+        delete document.body.dataset.lastOpenCommentId;
+        
+        // 获取动态栏元素并重置其样式
+        const dynamicFeed = document.getElementById('dynamic-feed');
+        const dynamicFeedContainer = document.querySelector('.dynamic-feed-container');
+        
+        if (dynamicFeed) {
+          dynamicFeed.classList.remove('force-reset');
+          dynamicFeed.classList.remove('reset-transform');
+          
+          if (dynamicFeedContainer) {
+            (dynamicFeedContainer as HTMLElement).classList.remove('reset-transform');
+          }
+        }
+      }, 100); // 添加短暂延迟确保DOM更新
     }
   }
 };
@@ -675,6 +697,39 @@ const ArticleCard = React.memo(({
         }, 50);
       }, 50);
     }
+    
+    // 组件卸载时的清理
+    return () => {
+      // 确保组件卸载时，如果评论区是打开的，会正确更新计数
+      if (showComments) {
+        updateGlobalCommentsCount(false);
+        
+        // 派发检查事件，确认是否还有其他评论打开
+        setTimeout(() => {
+          const event = new CustomEvent('check-comments-open');
+          let hasOtherOpenComments = false;
+          
+          const listener = () => { hasOtherOpenComments = true; };
+          window.addEventListener('comment-is-open', listener);
+          window.dispatchEvent(event);
+          
+          setTimeout(() => {
+            window.removeEventListener('comment-is-open', listener);
+            
+            if (!hasOtherOpenComments) {
+              // 如果没有其他评论打开，强制重置所有状态
+              document.body.classList.remove('comments-open');
+              document.body.dataset.openCommentsCount = '0';
+              delete document.body.dataset.lastCommentOpenTime;
+              delete document.body.dataset.lastOpenCommentId;
+              
+              // 派发事件通知动态栏可以回到原位
+              window.dispatchEvent(new CustomEvent('all-comments-closed'));
+            }
+          }, 100);
+        }, 50);
+      }
+    };
   }, [showComments, cardId, toggleSidebarForComment]);
 
   /**
@@ -930,7 +985,7 @@ const ArticleCard = React.memo(({
     
     const payload = {
       action_type: 'share' as 'share', // 显式类型
-      target_type: 'article' as 'article', // 显式类型
+      target_type: targetType as 'article' | 'post', // 根据卡片类型设置正确的目标类型
       target_id: id,
       content: comment,
       images: images // 添加图片数组
@@ -950,7 +1005,7 @@ const ArticleCard = React.memo(({
         toast.success('分享成功！');
         
         // 同步缓存
-        queryClient.setQueryData(['articleDetails', slug], (oldData: any) => {
+        queryClient.setQueryData([`${targetType}Details`, slug], (oldData: any) => {
           if (!oldData) return oldData;
           return {
             ...oldData,
@@ -1104,8 +1159,28 @@ const ArticleCard = React.memo(({
    * 关闭评论区的处理函数
    */
   const handleCloseComments = () => {
+    // 立即隐藏评论区
     setShowComments(false);
+    
+    // 减少全局评论计数
     updateGlobalCommentsCount(false);
+    
+    // 检查全局计数，如果已经为0，则强制重置动态栏位置
+    const currentCount = parseInt(document.body.dataset.openCommentsCount || '0', 10);
+    if (currentCount <= 0) {
+      // 添加一个短暂延迟，确保在评论关闭动画完成后再重置动态栏
+      setTimeout(() => {
+        document.body.classList.remove('comments-open');
+        
+        // 派发事件通知动态栏可以回到原位
+        window.dispatchEvent(new CustomEvent('all-comments-closed'));
+        
+        // 重置全局计数和其他状态
+        document.body.dataset.openCommentsCount = '0';
+        delete document.body.dataset.lastCommentOpenTime;
+        delete document.body.dataset.lastOpenCommentId;
+      }, 150);
+    }
   };
   
   const isSeries = seriesArticles && seriesArticles.length > 0;
@@ -1415,20 +1490,11 @@ const ArticleCard = React.memo(({
               {likesCount !== undefined && (
                 <button 
                   className={`flex items-center transition-colors action-button ${isLiked ? 'text-red-500' : 'hover:text-red-400'}`}
-                  title={`${likesCount} 个赞`}
                   onClick={handleLike}
                   disabled={targetType === 'article' ? articleLikeMutation.isPending : postLikeMutation.isPending}
                 >
-                  {isLiked ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 mr-1 ${targetType === 'article' ? articleLikeMutation.isPending : postLikeMutation.isPending ? 'animate-pulse' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 mr-1 ${targetType === 'article' ? articleLikeMutation.isPending : postLikeMutation.isPending ? 'animate-pulse' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-              )}
-                  <span>{likesCount}</span>
+                  <Heart className={`h-4 w-4 ${targetType === 'article' ? articleLikeMutation.isPending : postLikeMutation.isPending ? 'animate-pulse' : ''} ${isLiked ? 'fill-current' : ''}`} />
+                  <span className="ml-1 w-3 tabular-nums text-left">{likesCount}</span>
                 </button>
               )}
               
@@ -1436,20 +1502,11 @@ const ArticleCard = React.memo(({
               {collectsCount !== undefined && (
                 <button 
                   className={`flex items-center transition-colors action-button ${isCollected ? 'text-yellow-500' : 'hover:text-yellow-400'}`}
-                  title={`${collectsCount} 个收藏`}
                   onClick={handleCollect}
                   disabled={targetType === 'article' ? articleCollectMutation.isPending : postCollectMutation.isPending}
                 >
-                  {isCollected ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 mr-1 ${targetType === 'article' ? articleCollectMutation.isPending : postCollectMutation.isPending ? 'animate-pulse' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 mr-1 ${targetType === 'article' ? articleCollectMutation.isPending : postCollectMutation.isPending ? 'animate-pulse' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                  </svg>
-                  )}
-                  <span>{collectsCount}</span>
+                  <Pin className={`h-4 w-4 ${targetType === 'article' ? articleCollectMutation.isPending : postCollectMutation.isPending ? 'animate-pulse' : ''} ${isCollected ? 'fill-current' : ''}`} />
+                  <span className="ml-1 w-3 tabular-nums text-left">{collectsCount}</span>
                 </button>
               )}
               
@@ -1457,28 +1514,30 @@ const ArticleCard = React.memo(({
               {shareCount !== undefined && (
                 <button 
                   className="flex items-center hover:text-green-400 transition-colors action-button" 
-                  title={`${shareCount} 次分享`}
                   onClick={handleShare}
                   disabled={isSubmittingAction}
                 >
-                  <Share2 className={`h-4 w-4 mr-1 ${isSubmittingAction ? 'animate-pulse' : ''}`} />
-                  <span>{shareCount}</span>
+                  <ShareIcon className={`h-4 w-4 ${isSubmittingAction ? 'animate-pulse' : ''}`} />
+                  <span className="ml-1 w-3 tabular-nums text-left">{shareCount}</span>
                 </button>
               )}
               
               {/* 评论按钮 */}
                {comment_count !== undefined && (
-                <div className="relative flex items-center"> {/* 包裹评论按钮和预览 */}
+                <div className="relative flex items-center" onClick={(e) => e.stopPropagation()}> {/* 包裹评论按钮和预览，阻止事件冒泡 */}
                   <button 
                     ref={commentBtnRef}
                     className={`flex items-center transition-colors action-button ${showComments ? 'text-blue-400' : 'hover:text-blue-400'}`}
                     title={`${comment_count} 条评论`}
-                    onClick={handleCommentClick}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleCommentClick(e);
+                    }}
+                    aria-label={showComments ? "关闭评论" : "查看评论"}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                     </svg>
-                     <span>{comment_count}</span>
+                    <Message className="h-4 w-4" />
+                    <span className="ml-1 w-3 tabular-nums text-left" onClick={(e) => e.stopPropagation()}>{comment_count}</span>
                   </button>
 
                   {/* 新增：预览评论显示区域 */}
@@ -1607,7 +1666,7 @@ const ArticleCard = React.memo(({
             isLoading={isSubmittingAction}
             dynamicToShare={{ id, title, content: content || '' }} 
             username={auth.user?.nickname || auth.user?.email?.split('@')[0] || '您'} 
-            altText={`分享文章: ${title}`}
+            altText={`分享${targetType === 'article' ? '文章' : '帖子'}: ${title}`}
           />
         </Modal>
       )}

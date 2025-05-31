@@ -23,7 +23,8 @@ from sqlalchemy.exc import IntegrityError
 import re
 from sqlalchemy.orm import joinedload
 from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
-from app.utils.auth_utils import admin_required
+# from app.utils.auth_utils import admin_required # Removed import for admin_required
+from datetime import datetime
 
 # 创建蓝图
 topics_bp = Blueprint('topics_bp', __name__)
@@ -31,16 +32,17 @@ topics_bp = Blueprint('topics_bp', __name__)
 def generate_slug(name):
     # 简单的 slug 生成器，移除特殊字符，转小写，用连字符连接
     slug = name.lower()
-    slug = re.sub(r'[^\w\s-]', '', slug) # 移除非字母数字、空格、连字符
-    slug = re.sub(r'[\s_]+', '-', slug) # 替换空格和下划线为连字符
-    slug = re.sub(r'^-+|-+$', '', slug) # 移除开头和结尾的连字符
+    slug = re.sub(r'[^\\w\\s-]', '', slug) # 移除非字母数字、空格、连字符
+    slug = re.sub(r'[\\s_]+', '-', slug) # 替换空格和下划线为连字符
+    slug = re.sub(r'^-+|-+$$', '', slug) # 移除开头和结尾的连字符
     return slug
 
 @topics_bp.route('/topics/network', methods=['GET'])
 def get_topic_network():
-    """获取用于 React Flow 的节点和边数据（全局默认位置）"""
+    """获取用于 React Flow 的节点和边数据（全局默认位置 - 仅限已激活主题）"""
     try:
-        topics = Topic.query.all()
+        # Only fetch active topics
+        topics = Topic.query.filter(Topic.status == 'active').all()
         # 不再查询relations，因为表已被删除
         # relations = TopicRelation.query.all()
 
@@ -64,7 +66,8 @@ def get_topic_network():
                 'position': {'x': topic.pos_x, 'y': topic.pos_y},
                 'data': { 
                     'label': topic.name,
-                    'slug': topic.slug # 将 slug 也放入 data
+                    'slug': topic.slug, # 将 slug 也放入 data
+                    'description': topic.description # NEU: Beschreibung hinzugefügt
                 },
                 'style': node_style # 应用节点样式
                 # 可以根据需要添加 type: 'input' 或 'output' 等
@@ -83,12 +86,12 @@ def get_topic_network():
 @topics_bp.route('/topics/user_network', methods=['GET'])
 @jwt_required()
 def get_user_topic_network():
-    """获取用于 React Flow 的节点和边数据（用户特定位置）"""
+    """获取用于 React Flow 的节点和边数据（用户特定位置 - 仅限已激活主题）"""
     try:
         current_user_id = get_jwt_identity()
         
-        # 首先获取所有主题
-        topics = Topic.query.all()
+        # 首先获取所有已激活的主题
+        topics = Topic.query.filter(Topic.status == 'active').all()
         # 不再查询relations，因为表已被删除
         # relations = TopicRelation.query.all()
         
@@ -121,7 +124,8 @@ def get_user_topic_network():
                 'position': position,
                 'data': { 
                     'label': topic.name,
-                    'slug': topic.slug
+                    'slug': topic.slug,
+                    'description': topic.description # NEU: Beschreibung hinzugefügt
                 },
                 'style': node_style
             })
@@ -146,12 +150,12 @@ def save_user_positions():
         if not data or 'nodes' not in data:
             return jsonify({'error': '缺少节点位置数据'}), 400
             
-        nodes = data['nodes']
+        nodes_data = data['nodes'] # Umbenannt, um Konflikt mit globalem 'nodes' zu vermeiden
         positions_updated = 0
         
-        for node in nodes:
-            topic_id = int(node['id'])  # React Flow 使用字符串 ID，需要转回整数
-            position = node['position']
+        for node_item in nodes_data: # Geändertes Schleifenvariable
+            topic_id = int(node_item['id'])  # React Flow 使用字符串 ID，需要转回整数
+            position = node_item['position']
             
             # 检查该用户是否已有该主题的位置记录
             user_position = UserTopicPosition.query.filter_by(
@@ -187,64 +191,58 @@ def save_user_positions():
         return jsonify({'error': '保存节点位置失败'}), 500
 
 @topics_bp.route('/', methods=['POST'])
-@jwt_required()
-@admin_required
 def create_topic():
-    """创建新主题 (仅管理员)"""
+    """创建新主题 (任何人都可以提交，默认为待审批状态)"""
     data = request.get_json()
     if not data or not data.get('name'):
         return jsonify({'error': '缺少主题名称'}), 400
 
     name = data['name']
-    # 如果前端没提供 slug，自动生成一个
-    slug = data.get('slug', generate_slug(name))
-    
-    # 检查 slug 是否已存在
-    if Topic.query.filter_by(slug=slug).first():
-         # 如果自动生成的 slug 冲突，尝试添加后缀 (简单处理)
-         if not data.get('slug'): 
-             count = 1
-             original_slug = slug
-             while Topic.query.filter_by(slug=slug).first():
-                 slug = f"{original_slug}-{count}"
-                 count += 1
-         else:
-             return jsonify({'error': '主题 slug 已存在'}), 409 # 409 Conflict
+    description = data.get('description')
+    style_shape = data.get('style_shape', 'rectangle') # Get style_shape, default to rectangle
+
+    # 检查主题名称是否已存在 (无论状态如何，名称必须唯一)
+    if Topic.query.filter_by(name=name).first():
+        return jsonify({'error': '该主题名称已存在，请使用其他名称。'}), 409
 
     new_topic = Topic(
         name=name,
-        slug=slug,
-        description=data.get('description'),
-        pos_x=float(data.get('pos_x', 0.0)),
-        pos_y=float(data.get('pos_y', 0.0)),
-        style_bgcolor=data.get('style_bgcolor', '#ffffff'),
-        style_fgcolor=data.get('style_fgcolor', '#333333'),
-        style_width=int(data.get('style_width', 70)),
-        style_height=int(data.get('style_height', 70)),
-        style_shape=data.get('style_shape', 'rectangle')
+        description=description,
+        slug=None,  # Slug will be set by admin upon approval
+        status='pending_approval', # Explicitly set, though it's the model default
+        style_shape=style_shape
+        # pos_x, pos_y, style_bgcolor, style_fgcolor etc. will use model defaults
     )
     
     try:
         db.session.add(new_topic)
         db.session.commit()
+        # Return the full topic dict, including its pending status
         return jsonify(new_topic.to_dict()), 201
-    except IntegrityError as e:
+    except IntegrityError as e: # Should primarily catch unique name constraint if check above failed due to race condition
         db.session.rollback()
-        # 可能是其他唯一约束冲突，虽然我们已经检查了 slug
-        print(f"Database integrity error: {e}")
-        return jsonify({'error': '创建主题时数据库出错'}), 500
+        current_app.logger.error(f"Database integrity error during topic creation: {e}")
+        # Check if the error is due to a unique constraint on 'name'
+        if 'topics_name_key' in str(e.orig).lower() or (e.orig and 'unique constraint failed: topics.name' in str(e.orig).lower()):
+             return jsonify({'error': '该主题名称已存在 (并发)。'}), 409
+        return jsonify({'error': '创建主题失败，数据库错误。'}), 500
     except Exception as e:
         db.session.rollback()
-        print(f"Error creating topic: {e}")
-        return jsonify({'error': '创建主题失败'}), 500
+        current_app.logger.error(f"Error creating topic: {e}")
+        return jsonify({'error': '创建主题请求失败。'}), 500
 
-# --- 实现 Topic CRUD --- 
+# --- 实现 Topic CRUD (保持，但注意GET /topics/ 和 GET /topics/<id> 现在是否也应该只显示 active?) ---
+# For now, these GET routes will show all topics regardless of status.
+# Consider if these should also be restricted or have an admin version.
 
 @topics_bp.route('/', methods=['GET'])
 def get_topics():
     """获取所有主题列表"""
     try:
-        topics = Topic.query.order_by(Topic.name).all()
+        # Sortierung hinzugefügt für konsistente Reihenfolge, z.B. nach Erstellungsdatum oder Name
+        topics = Topic.query.order_by(Topic.created_at.desc()).all()
+        # Verwendung von to_dict(), um das volle Objekt zurückzugeben, 
+        # da die Liste jetzt vielleicht mehr Details benötigt als nur für ReactFlow-Nodes
         return jsonify([topic.to_dict() for topic in topics])
     except Exception as e:
         print(f"Error fetching topics: {e}")
@@ -252,7 +250,7 @@ def get_topics():
 
 @topics_bp.route('/<int:topic_id>', methods=['GET'])
 def get_topic(topic_id):
-    """获取单个主题详情"""
+    """获取单个主题详情 (所有状态)"""
     try:
         topic = Topic.query.get_or_404(topic_id)
         return jsonify(topic.to_dict())
@@ -261,8 +259,10 @@ def get_topic(topic_id):
         return jsonify({'error': '获取主题详情失败'}), 500
 
 @topics_bp.route('/<int:topic_id>', methods=['PUT'])
+@jwt_required()
+# @admin_required # Only admin can update topics for now, or define more granular permissions
 def update_topic(topic_id):
-    """更新主题信息"""
+    """更新主题 (管理员)"""
     topic = Topic.query.get_or_404(topic_id)
     data = request.get_json()
     if not data:
@@ -308,8 +308,10 @@ def update_topic(topic_id):
         return jsonify({'error': '更新主题失败'}), 500
 
 @topics_bp.route('/<int:topic_id>', methods=['DELETE'])
+@jwt_required()
+# @admin_required # Only admin can delete topics
 def delete_topic(topic_id):
-    """删除主题"""
+    """删除主题 (管理员)"""
     topic = Topic.query.get_or_404(topic_id)
     try:
         # 删除关联关系由 cascade='all, delete-orphan' 处理
@@ -324,40 +326,34 @@ def delete_topic(topic_id):
 # --- 新增：按 slug 获取主题 --- 
 @topics_bp.route('/slug/<string:slug>', methods=['GET'])
 def get_topic_by_slug(slug):
-    """通过 slug 获取主题详情，并附加用户收藏状态"""
-    # --- 修改：移除 flush=True ---
-    current_app.logger.info(f"[DEBUG] Received request for slug: '{slug}' (Type: {type(slug)}, Length: {len(slug)})")
-    # --- 结束修改 ---
+    """按 slug 获取主题详情 (仅限已激活主题)"""
     try:
-        topic = Topic.query.filter_by(slug=slug).first()
-        # --- 修改：移除 flush=True ---
-        current_app.logger.info(f"[DEBUG] Query result for slug '{slug}': {topic}")
-        # --- 结束修改 ---
-        if topic:
-            is_favorited = False
-            user_id = None
-            try:
-                verify_jwt_in_request(optional=True)
-                user_identity = get_jwt_identity()
-                if user_identity:
-                     user_id = int(user_identity) # Assuming id is int
-            except Exception as e:
-                current_app.logger.info(f"JWT optional check failed for topic slug {slug}: {e}")
-                pass
+        # Ensure slug is not empty and topic is active
+        if not slug:
+            return jsonify({'error': 'Slug不能为空'}), 400
+        topic = Topic.query.filter_by(slug=slug, status='active').first_or_404()
+        
+        # 获取用户收藏状态
+        is_favorited = False
+        user_id = None
+        try:
+            verify_jwt_in_request(optional=True)
+            user_identity = get_jwt_identity()
+            if user_identity:
+                user_id = int(user_identity) # Assuming id is int
+        except Exception as e:
+            current_app.logger.info(f"JWT optional check failed for topic slug {slug}: {e}")
+            pass
 
-            if user_id:
-                # 检查用户是否收藏了此 Topic
-                is_favorited = UserFavoriteTopic.query.filter_by(user_id=user_id, topic_id=topic.id).first() is not None
-            
-            topic_dict = topic.to_dict()
-            topic_dict['is_favorited'] = is_favorited # 添加收藏状态
-            return jsonify(topic_dict)
-        else:
-            return jsonify({'error': '无效的主题标识符。'}), 404
+        if user_id:
+            # 检查用户是否收藏了此 Topic
+            is_favorited = UserFavoriteTopic.query.filter_by(user_id=user_id, topic_id=topic.id).first() is not None
+        
+        topic_dict = topic.to_dict()
+        topic_dict['is_favorited'] = is_favorited # 添加收藏状态
+        return jsonify(topic_dict)
     except Exception as e:
-        # --- 修改：使用 Flask logger，移除 flush=True ---
         current_app.logger.error(f"Error fetching topic by slug {slug}: {e}")
-        # --- 结束修改 ---
         return jsonify({'error': '获取主题详情失败'}), 500
 
 # --- 新增：获取特定主题下的文章列表 --- 
@@ -496,6 +492,25 @@ def get_posts_by_topic_slug(topic_slug):
         # import traceback # No need if using exc_info=True
         # traceback.print_exc() 
         return jsonify({'error': f'获取主题 {topic_slug} 的帖子列表失败'}), 500
+
+# The following admin routes will be MOVED to backend/app/routes/admin/__init__.py
+# @topics_bp.route('/admin/topics/pending', methods=['GET'])
+# @jwt_required()
+# @admin_required
+# def get_pending_topics_admin():
+#     ...
+
+# @topics_bp.route('/admin/topics/<int:topic_id>/approve', methods=['POST'])
+# @jwt_required()
+# @admin_required
+# def approve_topic_admin(topic_id):
+#     ...
+
+# @topics_bp.route('/admin/topics/<int:topic_id>/reject', methods=['POST'])
+# @jwt_required()
+# @admin_required
+# def reject_topic_admin(topic_id):
+#     ...
 
 # --- TODO: 添加其他 CRUD 路由 --- 
 # GET /topics

@@ -206,7 +206,7 @@ const PostDetailPage: React.FC = () => {
         // 创建新的视频容器div
         const videoContainer = document.createElement('div');
         videoContainer.className = 'video-container video-processed';
-        videoContainer.style.cssText = 'width: 100%; max-width: 800px; margin: 2em auto; position: relative; aspect-ratio: 16/9; background: #000; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden;';
+        videoContainer.style.cssText = 'width: 100%; margin: 2em auto; position: relative; aspect-ratio: 16/9; background: #000; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden;';
         
         // 设置iframe样式
         if (iframe instanceof HTMLIFrameElement) {
@@ -669,11 +669,10 @@ const PostDetailPage: React.FC = () => {
       const response = await axios.post(`${API_BASE_URL}/api/actions`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.status === 201 || response.status === 200) {
+      if (response.status === 201) {
+        toast.success('分享成功！');
         setIsNewShareModalOpen(false);
         setNewShareComment('');
-        setShareCount(prev => prev + 1);
-        toast.success('分享成功！');
         queryClient.invalidateQueries({ queryKey: ['postDetails', postSlug] });
       } else {
         const errorData = response.data?.error || '分享操作失败';

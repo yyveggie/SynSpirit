@@ -23,7 +23,7 @@ class Topic(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
-    slug = db.Column(db.String(100), nullable=False, unique=True)
+    slug = db.Column(db.String(100), nullable=True, unique=True)
     description = db.Column(db.Text, nullable=True)
     
     # 位置信息 (默认坐标)
@@ -36,6 +36,7 @@ class Topic(db.Model):
     style_width = db.Column(db.Integer, default=70) # 宽度，像素
     style_height = db.Column(db.Integer, default=70) # 高度，像素
     style_shape = db.Column(db.String(20), default='rectangle') # 形状: rectangle, circle 等
+    status = db.Column(db.String(20), nullable=False, default='pending_approval', index=True)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

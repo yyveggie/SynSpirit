@@ -167,9 +167,10 @@ def update_post_counts(self, post_id):
             # 获取最终状态用于日志记录
             final_likes_count = post.likes_count
             final_collects_count = post.collects_count
+            final_shares_count = post.shares_count if hasattr(post, 'shares_count') else 0  # 添加对分享数的获取
             
-            logger.info(f"[TASK_COMPLETED] update_post_counts for post_id: {post_id}. Likes: {final_likes_count}, Collects: {final_collects_count}")
-            return f"Post {post_id} counts updated. Likes: {final_likes_count}, Collects: {final_collects_count}"
+            logger.info(f"[TASK_COMPLETED] update_post_counts for post_id: {post_id}. Likes: {final_likes_count}, Collects: {final_collects_count}, Shares: {final_shares_count}")
+            return f"Post {post_id} counts updated. Likes: {final_likes_count}, Collects: {final_collects_count}, Shares: {final_shares_count}"
 
         except Exception as e:
             session.rollback()

@@ -567,6 +567,17 @@ def handle_action():
                 db.session.add(new_share_action)
                 db.session.commit()
                 print(f"User {current_user_id} shared {target_type} {target_id}")
+                
+                # 根据不同类型的目标，调用相应的更新任务
+                if target_type == 'article':
+                    # 已有的文章分享处理
+                    update_article_counts.delay(target_id)
+                    print(f"Queued update_article_counts for article {target_id} (share operation)")
+                elif target_type == 'post':
+                    # 新增：更新帖子的shares_count
+                    update_post_counts.delay(target_id)
+                    print(f"Queued update_post_counts for post {target_id} (share operation)")
+                
                 return jsonify(action_to_timeline_dict(new_share_action, current_user_id)), 201 # 确保返回值正确
             except Exception as e:
                 db.session.rollback()

@@ -29,8 +29,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FaRegComment, FaRetweet, FaHeart, FaRegHeart, FaBookmark, FaRegBookmark, FaTrash } from 'react-icons/fa';
-import { IoShareSocialOutline } from 'react-icons/io5';
+import { Heart, Pin, Share, Message, TrashTwo } from "@mynaui/icons-react";
 import ShareDynamicModal from './ShareDynamicModal';
 import { API_BASE_URL } from '../config';
 import QuotedDynamicView, { DynamicDetails } from './QuotedDynamicView';
@@ -1034,19 +1033,21 @@ const DynamicCard = memo(({
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <span className="text-xs text-black">
+        <div className="flex items-center">
+          <span className="text-xs text-black w-auto mr-1">
             {formatDate(createdAt)}
           </span>
           {variant === 'main' && currentUser && currentUser.id === authorId && !isContentEffectivelyDeleted && (
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
               <button
                 onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-                className="text-gray-400 hover:text-red-500 p-1 rounded-full transition-colors duration-150"
+                className="text-gray-400 hover:text-red-500 transition-colors duration-150 flex items-center justify-center"
                 aria-label="删除动态"
                 disabled={!currentActionId} 
               >
-                <FaTrash />
+                <div className="w-3.5 h-3.5 flex items-center justify-center">
+                  <TrashTwo className="w-full h-full" stroke="currentColor" fill="none" />
+                </div>
               </button>
             </div>
           )}
@@ -1097,72 +1098,71 @@ const DynamicCard = memo(({
 
       {(variant === 'main' || variant === 'timeline') && (
         <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-300">
-          <div className="flex space-x-3 text-gray-500">
-            {/* 点赞按钮 - New Order: 1st */}
-            <div className="w-16 flex items-center">
+          <div className="flex space-x-4 text-gray-500">
+            {/* 点赞按钮 */}
+            <div className="w-10 h-5 flex items-center">
               <button
-                className={`flex items-center gap-1 transition ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                className={`flex items-center transition-colors ${isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
                 onClick={handleLikeToggle}
                 disabled={isSubmitting}
                 aria-label={isLiked ? '取消点赞' : '点赞'}
               >
-                {isLiked ? <FaHeart className="text-sm" /> : <FaRegHeart className="text-sm" />}
-                <span 
-                  className="text-sm tabular-nums min-w-[18px] text-right"
-                >
-                  {likeCount > 0 ? likeCount : ''}
-                </span>
+                <div className="w-3.5 h-3.5 flex items-center justify-center">
+                  {isLiked ? (
+                    <Heart className="w-full h-full text-red-500" fill="currentColor" />
+                  ) : (
+                    <Heart className="w-full h-full" stroke="currentColor" fill="none" />
+                  )}
+                </div>
+                <span className="ml-0.5 text-xs tabular-nums inline-block w-4 h-4 leading-4">{likeCount > 0 ? likeCount : ''}</span>
               </button>
             </div>
 
-            {/* 收藏按钮 - New Order: 2nd */}
-            <div className="w-16 flex items-center">
+            {/* 收藏按钮 */}
+            <div className="w-10 h-5 flex items-center">
               <button
-                className={`flex items-center gap-1 transition ${isCollected ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}`}
+                className={`flex items-center transition-colors ${isCollected ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}`}
                 onClick={handleCollectToggle}
                 disabled={isSubmitting}
                 aria-label={isCollected ? '取消收藏' : '收藏'}
               >
-                {isCollected ? <FaBookmark className="text-sm" /> : <FaRegBookmark className="text-sm" />}
-                <span 
-                  className="text-sm tabular-nums min-w-[18px] text-right"
-                >
-                  {collectCount > 0 ? collectCount : ''}
-                </span>
+                <div className="w-3.5 h-3.5 flex items-center justify-center">
+                  {isCollected ? (
+                    <Pin className="w-full h-full text-yellow-400" fill="currentColor" />
+                  ) : (
+                    <Pin className="w-full h-full" stroke="currentColor" fill="none" />
+                  )}
+                </div>
+                <span className="ml-0.5 text-xs tabular-nums inline-block w-4 h-4 leading-4">{collectCount > 0 ? collectCount : ''}</span>
               </button>
             </div>
 
-            {/* 分享按钮 - New Order: 3rd */}
-            <div className="w-16 flex items-center">
+            {/* 分享按钮 */}
+            <div className="w-10 h-5 flex items-center">
               <button
                 onClick={(e) => { e.stopPropagation(); handleShare(); }}
-                className="flex items-center gap-1 hover:text-green-400 transition-colors duration-150"
+                className="flex items-center hover:text-green-400 transition-colors"
                 aria-label="分享"
               >
-                <IoShareSocialOutline className="text-sm" />
-                <span 
-                  className="text-sm tabular-nums min-w-[18px] text-right"
-                >
-                  {(dynamic.repost_count || 0) > 0 ? (dynamic.repost_count || 0) : ''}
-                </span>
+                <div className="w-3.5 h-3.5 flex items-center justify-center">
+                  <Share className="w-full h-full" stroke="currentColor" fill="none" />
+                </div>
+                <span className="ml-0.5 text-xs tabular-nums inline-block w-4 h-4 leading-4">{(dynamic.repost_count || 0) > 0 ? (dynamic.repost_count || 0) : ''}</span>
               </button>
             </div>
 
-            {/* 评论按钮 - New Order: 4th */}
-            <div className="w-16 flex items-center">
-              <div
-                className={`flex items-center gap-1 text-gray-400`}
-                aria-label="评论数"
-              >
-                <FaRegComment className="text-sm" />
-                <span 
-                  className="text-sm tabular-nums min-w-[18px] text-right"
-                >
-                  {(dynamic.comment_count || 0) > 0 ? (dynamic.comment_count || 0) : ''}
-                </span>
+            {/* 评论按钮 */}
+            <div className="w-10 h-5 flex items-center">
+              <div className={`flex items-center text-gray-400`} aria-label="评论数">
+                <div className="w-3.5 h-3.5 flex items-center justify-center">
+                  <Message className="w-full h-full" stroke="currentColor" fill="none" />
               </div>
+                <span className="ml-0.5 text-xs tabular-nums inline-block w-4 h-4 leading-4">{(dynamic.comment_count || 0) > 0 ? (dynamic.comment_count || 0) : ''}</span>
             </div>
           </div>
+          </div>
+          {/* 添加空占位区域，确保底部高度固定 */}
+          <div className="w-4 invisible">0</div>
         </div>
       )}
 

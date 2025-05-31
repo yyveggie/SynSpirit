@@ -29,9 +29,10 @@ import UserAvatar from './UserAvatar';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 // --- End TanStack Query Import ---
 import { API_BASE_URL } from '../config';
-import { FaHeart, FaRegHeart, FaSpinner, FaReply, FaTrashAlt, FaSyncAlt } from 'react-icons/fa';
-import { BsArrowReturnRight, BsTrash } from 'react-icons/bs';
+import { FaSpinner, FaReply, FaSyncAlt } from 'react-icons/fa';
+import { BsArrowReturnRight } from 'react-icons/bs';
 import { motion } from 'framer-motion';
+import { Heart, Pin, Share, TrashTwo, EditOne } from "@mynaui/icons-react";
 
 // --- 接口定义 ---
 interface UserInfo {
@@ -56,6 +57,7 @@ interface Comment {
   is_deleted?: boolean; // 新增：软删除标记
   _isOptimistic?: boolean; // 新增：标记乐观更新的临时对象
   is_ai_generated: boolean;
+  is_edited?: boolean; // 新增：编辑标记
 }
 
 // 定义乐观更新上下文类型
@@ -174,7 +176,15 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   // 修改：使用useRef存储展开状态，防止刷新时重置
   const collapsedCommentsRef = useRef<{ [key: number]: boolean }>({});
   const [collapsedComments, setCollapsedComments] = useState<{ [key: number]: boolean }>({});
+  // 修改：将selectedCommentId重命名为pendingDeleteCommentId以更好地表达其用途
+  const [pendingDeleteCommentId, setPendingDeleteCommentId] = useState<number | null>(null);
+  // 恢复isCommentFocused状态
   const [isCommentFocused, setIsCommentFocused] = useState(false);
+  // 添加编辑状态
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
   const { token: authToken, user: currentUserFromAuth } = useAuth();
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
@@ -550,15 +560,62 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     },
   });
 
+  // --- 新增：恢复评论 Mutation ---
+  const restoreCommentMutation = useMutation<
+    void,
+    Error,
+    { commentId: number }
+  >({
+    mutationFn: async ({ commentId }) => {
+      // 根据 targetType 使用不同的恢复路径
+      let restoreUrl = '';
+      if (targetType === 'article') {
+        restoreUrl = `${API_BASE_URL}/api/original-comments/articles/${targetId}/comments/${commentId}/restore`;
+      } else if (targetType === 'post') {
+        restoreUrl = `${API_BASE_URL}/api/posts/${targetId}/comments/${commentId}/restore`;
+      } else {
+        throw new Error(`[Restore Comment] Unknown targetType: ${targetType}`);
+      }
+      
+      console.log(`[Debug] 发送恢复评论请求: ${restoreUrl}`);
+      
+      try {
+        // 发送 POST 请求恢复评论
+        const response = await axios.post(restoreUrl, {}, { headers: { Authorization: `Bearer ${authToken}` } });
+        console.log(`[Debug] 恢复评论成功, 状态码: ${response.status}`);
+        return response.data;
+      } catch (error) {
+        console.error(`[Debug] 恢复评论请求失败:`, error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', targetType, targetId] });
+      toast.success('评论已恢复');
+    },
+    onError: (err) => {
+      console.error("恢复评论失败:", err);
+      toast.error(err.message || '恢复评论失败');
+    },
+  });
+
   const handleDeleteCommentOrReply = (commentId: number) => {
     if (!authToken) {
       toast.error("请先登录。");
       return;
     }
-    if (!window.confirm('确定要删除这条评论吗？其下的回复将保留，但此评论内容会消失。')) {
+    
+    // 直接调用删除评论的 mutation
+    deleteCommentMutation.mutate({ commentId });
+  };
+
+  // --- 新增：处理恢复评论的函数 ---
+  const handleRestoreComment = (commentId: number) => {
+    if (!authToken) {
+      toast.error("请先登录。");
       return;
     }
-    deleteCommentMutation.mutate({ commentId });
+    restoreCommentMutation.mutate({ commentId });
   };
 
   // --- Like/Unlike Mutations (Can be combined or separate) ---
@@ -817,6 +874,112 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     };
   }, [replyToCommentId]);
 
+  // 在页面任何地方点击时取消选中
+  useEffect(() => {
+    const handleGlobalClick = (event: MouseEvent) => {
+      // 如果点击的不是评论区域内部，取消待删除状态
+      if (pendingDeleteCommentId !== null) {
+        setPendingDeleteCommentId(null);
+      }
+    };
+    
+    // 添加到document而不是window，以便捕获所有点击
+    document.addEventListener('click', handleGlobalClick);
+    
+    return () => {
+      document.removeEventListener('click', handleGlobalClick);
+    };
+  }, [pendingDeleteCommentId]);
+
+  // --- 添加评论编辑的mutation ---
+  const editCommentMutation = useMutation({
+    mutationFn: async ({ commentId, content }: { commentId: number; content: string }) => {
+      // 构造API URL
+      let editUrl = '';
+      if (targetType === 'article') {
+        editUrl = `${API_BASE_URL}/api/original-comments/articles/${targetId}/comments/${commentId}`;
+      } else if (targetType === 'post') {
+        editUrl = `${API_BASE_URL}/api/posts/${targetId}/comments/${commentId}`;
+      } else {
+        throw new Error(`不支持的目标类型: ${targetType}`);
+      }
+      
+      const response = await axios.put<Comment>(
+        editUrl,
+        { content: content.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return response.data;
+    },
+    onSuccess: (updatedComment) => {
+      // 更新评论列表中的评论
+      queryClient.setQueryData(commentsQueryKey, (oldData: Comment[] | undefined = []) => {
+        const updateRecursively = (list: Comment[]): Comment[] => list.map(c => {
+          if (c.id === updatedComment.id) {
+            return { ...c, ...updatedComment };
+          }
+          if (c.replies && c.replies.length > 0) {
+            return { ...c, replies: updateRecursively(c.replies) };
+          }
+          return c;
+        });
+        return updateRecursively(oldData);
+      });
+      
+      setEditingCommentId(null);
+      setEditContent('');
+      setSubmittingEdit(false);
+      toast.success('评论更新成功');
+    },
+    onError: (error) => {
+      console.error('编辑评论失败:', error);
+      toast.error('编辑评论失败，请重试');
+      setSubmittingEdit(false);
+    },
+  });
+
+  // --- 添加处理编辑评论的函数 ---
+  const handleEditClick = (commentId: number, content: string) => {
+    if (!authToken) {
+      toast.warn("请先登录");
+      return;
+    }
+    
+    setEditingCommentId(commentId);
+    setEditContent(content);
+    
+    // 使用requestAnimationFrame确保DOM更新后再聚焦
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (editInputRef.current) {
+          editInputRef.current.focus();
+        }
+      }, 100);
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditContent('');
+  };
+
+  const handleSubmitEdit = (commentId: number) => {
+    if (!editContent.trim()) {
+      toast.warn("评论内容不能为空");
+      return;
+    }
+    
+    setSubmittingEdit(true);
+    editCommentMutation.mutate({
+      commentId,
+      content: editContent
+    });
+  };
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setEditContent(e.target.value);
+  };
+
   // --- Restore renderComment function definition ---
   const renderComment = (comment: Comment, depth = 0) => {
     const isRootComment = depth === 0;
@@ -824,16 +987,23 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                         ? (comment.user?.nickname || 'Lynn')
                         : (comment.user?.nickname || comment.user?.email?.split('@')[0] || '匿名用户');
     const isReplying = replyToCommentId === comment.id;
+    const isEditing = editingCommentId === comment.id;
     const canDelete = currentUser && comment.user && currentUser.id === comment.user.id && !comment.is_deleted && !comment.is_ai_generated;
+    // 判断当前用户是否可以编辑评论
+    const canEdit = canDelete && !isEditing && !comment.is_deleted;
+    // --- 新增：判断当前用户是否可以恢复评论 ---
+    const canRestore = currentUser && comment.user && currentUser.id === comment.user.id && comment.is_deleted === true && !comment.is_ai_generated;
     const isLikedByCurrentUser = comment.is_liked_by_current_user;
     const currentLikeCount = comment.likes_count;
     const isDeleted = comment.is_deleted === true;
     const shouldHideReplies = collapsedComments[comment.id] === true;
     const hasReplies = comment.replies && comment.replies.length > 0;
     const repliesCount = hasReplies ? countTotalComments(comment.replies) : 0;
-
+    const isEdited = comment.is_edited === true;
+    
     return (
-      <div key={comment.id} className={`comment-item ${depth > 0 ? 'ml-5 md:ml-6' : ''} py-3 relative`}>
+      <div key={comment.id} 
+           className={`comment-item ${depth > 0 ? 'ml-5 md:ml-6' : ''} py-3 relative`}>
          {/* 单条连接线 - 圆角实现曲线效果 */}
          {depth > 0 && (
             <div style={{
@@ -866,22 +1036,96 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                 </span>
                 <span className="text-xs text-gray-500 pt-1 ml-auto">
                   {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: zhCN })}
+                  {isEdited && <span className="ml-1 italic">(已编辑)</span>}
                 </span>
               </div>
               
-              <p style={{color: 'black'}} className="text-sm mt-1 whitespace-pre-wrap break-words">
-                {comment.is_ai_generated ? (
-                  <span className="text-purple-600 dark:text-purple-400">{comment.content}</span>
-                ) : isDeleted ? (
-                  <span className="text-blue-400 italic">{comment.content}</span>
+              {/* 使用一个固定布局的容器包裹评论内容，防止删除线导致位移 */}
+              <div className="relative" style={{ minHeight: `${comment.content.length > 100 ? 'auto' : '1.5rem'}` }}>
+                {isEditing ? (
+                  <div className="mt-1">
+                    <textarea
+                      ref={editInputRef}
+                      value={editContent}
+                      onChange={handleEditChange}
+                      rows={3}
+                      className="w-full p-3 pr-10 pb-3 bg-gray-100 rounded-md text-sm text-gray-800 placeholder-gray-500 resize-none shadow-inner border-0 outline-none focus:ring-1 focus:ring-blue-500/50"
+                      autoFocus
+                    />
+                    <div className="absolute bottom-2 right-2 flex items-center space-x-2">
+                      <button 
+                        onClick={() => handleCancelEdit()}
+                        className="text-gray-500 hover:text-gray-700 p-1 rounded-md"
+                        title="取消编辑"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                      <button 
+                        onClick={() => handleSubmitEdit(comment.id)}
+                        disabled={submittingEdit || !editContent.trim()}
+                        title="保存编辑"
+                        className={`text-gray-600 hover:text-blue-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors duration-200 p-1 rounded hover:bg-gray-200/50 ${submittingEdit ? 'animate-pulse' : ''}`}
+                      >
+                        {submittingEdit ? (
+                          <FaSpinner className="animate-spin h-4 w-4" />
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  <span style={{color: 'black'}}>{comment.content}</span>
+                  /* 评论内容区，修改点击行为 */
+                  <p 
+                    style={{color: 'black'}} 
+                    className="text-sm mt-1 whitespace-pre-wrap break-words inline-block"
+                  >
+                  {comment.is_ai_generated ? (
+                    <span className="text-purple-600 dark:text-purple-400">{comment.content}</span>
+                  ) : isDeleted ? (
+                    // 已删除评论的显示，红色文字
+                    <div className="flex items-center">
+                      <span className="text-red-400">[该评论已删除]</span>
+                      {/* 恢复按钮直接跟在后面 */}
+                      {canRestore && (
+                        <button 
+                          onClick={() => handleRestoreComment(comment.id)}
+                          className="flex items-center text-xs text-green-500 hover:text-green-600 transition-colors duration-200 ml-2"
+                          disabled={restoreCommentMutation.isPending}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                          </svg>
+                          恢复
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                      <span style={{color: 'black'}}>{comment.content}</span>
+                  )}
+                </p>
                 )}
-              </p>
+              </div>
               
               {/* 按钮组容器，完全删除左边距，确保与评论内容对齐 */}
-              <div className="mt-2 flex items-center pl-0">
-                {!isDeleted && (
+              <div className="mt-0.5 flex items-center pl-0">
+                {isDeleted ? (
+                  // 已删除评论的操作栏 - 只保留折叠按钮，恢复按钮已移至上方内容区
+                  <div className="flex items-center w-full pl-0 py-1">
+                    {hasReplies && (
+                      <button
+                        onClick={(e) => toggleReplies(comment.id, e)}
+                        className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 py-0 px-0 focus:outline-none font-mono text-xs flex items-center ml-auto"
+                        aria-label={shouldHideReplies ? '展开回复' : '收起回复'}>
+                        {shouldHideReplies ? `[+${repliesCount}]` : '[-]'}
+                      </button>
+                    )}
+                  </div>
+                ) : (
                   <div className="flex items-center w-full pl-0">
                     {/* 所有按钮统一放在这里，折叠按钮放在最左侧，与评论内容首字符对齐 */}
                     {hasReplies && (
@@ -898,38 +1142,64 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                     <button onClick={() => handleReplyClick(comment.id, displayName)}
                       className={`text-xs ${isReplying ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'} flex items-center mr-4 flex-shrink-0`}
                       disabled={!authToken} title={!authToken ? "请先登录" : (isReplying ? "取消回复" : "回复")}>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
+                      <div className="w-3.5 h-3.5 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
                     </button>
                     
-                    {/* 完全重构点赞按钮，使用固定布局 */}
-                    <div className="flex-shrink-0 mr-4 w-[32px]">
-                      <button onClick={() => authToken ? (isLikedByCurrentUser ? handleUnlike(comment.id) : handleLike(comment.id)) : toast.warn('请先登录后点赞')}
-                        className={`text-xs flex items-center transition-colors duration-200 ${isLikedByCurrentUser ? 'text-red-500 hover:text-red-600' : 'text-gray-500 hover:text-gray-700'}`}
-                        disabled={!authToken || toggleLikeMutation.isPending} title={!authToken ? "请先登录" : (isLikedByCurrentUser ? "取消点赞" : "点赞")}>
-                        <div className="w-[14px] flex-shrink-0">
-                          {isLikedByCurrentUser ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-red-500" viewBox="0 0 20 20" fill="#ef4444">
-                              <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                            </svg>
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                            </svg>
-                          )}
+                    {/* 点赞按钮 - 完全统一结构，使用相对定位容器和绝对定位计数 */}
+                    <button 
+                      onClick={() => authToken ? (isLikedByCurrentUser ? handleUnlike(comment.id) : handleLike(comment.id)) : toast.warn('请先登录后点赞')}
+                      className={`text-xs ${isLikedByCurrentUser ? 'text-red-500 hover:text-red-600' : 'text-gray-500 hover:text-gray-700'} flex items-center mr-4 flex-shrink-0 relative`}
+                      disabled={!authToken || toggleLikeMutation.isPending} 
+                      title={!authToken ? "请先登录" : (isLikedByCurrentUser ? "取消点赞" : "点赞")}
+                    >
+                      <div className="w-3.5 h-3.5 flex items-center justify-center">
+                        <Heart 
+                          className="w-full h-full" 
+                          stroke="currentColor" 
+                          fill={isLikedByCurrentUser ? "#ef4444" : "none"} 
+                          style={{color: isLikedByCurrentUser ? "#ef4444" : undefined}}
+                        />
+                      </div>
+                      {currentLikeCount > 0 && (
+                        <span className="absolute -right-3 -top-1 text-[10px] font-medium bg-gray-100 rounded-full px-1 min-w-[14px] text-center">
+                          {currentLikeCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* 添加编辑按钮 */}
+                    {canEdit && (
+                      <button 
+                        onClick={() => handleEditClick(comment.id, comment.content)}
+                        className="text-xs text-gray-500 hover:text-blue-600 flex items-center mr-4 flex-shrink-0"
+                        title="编辑评论"
+                      >
+                        <div className="w-3.5 h-3.5 flex items-center justify-center">
+                          <EditOne 
+                            className="w-full h-full" 
+                            stroke="currentColor"
+                          />
                         </div>
-                        <span className="ml-1 tabular-nums w-[12px] text-center block text-xs">{currentLikeCount}</span>
                       </button>
-                    </div>
+                    )}
                     
-                    {/* 删除按钮 - 使用细线条图标 */}
+                    {/* 添加删除按钮 */}
                     {canDelete && (
-                      <button onClick={() => handleDeleteCommentOrReply(comment.id)}
-                        className="text-xs text-gray-500 hover:text-red-500 flex items-center flex-shrink-0" title="删除评论">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                        </svg>
+                      <button 
+                        onClick={() => handleDeleteCommentOrReply(comment.id)}
+                        className="text-xs text-gray-500 hover:text-red-600 flex items-center mr-4 flex-shrink-0"
+                        title="删除评论"
+                      >
+                        <div className="w-3.5 h-3.5 flex items-center justify-center">
+                          <TrashTwo 
+                            className="w-full h-full" 
+                            stroke="currentColor"
+                          />
+                        </div>
                       </button>
                     )}
                   </div>
@@ -1004,54 +1274,48 @@ const CommentSection: React.FC<CommentSectionProps> = ({
       <div className="flex justify-between items-center mb-6">
          {/* --- 修改：将评论图标和计数添加到按钮组 --- */}
          <div className="flex items-center space-x-3">
-            {/* 评论图标和计数 */}
-            <div className="flex items-center text-gray-600 text-sm">
-                {/* @ts-ignore */}
-                <MessageSquare size={16} className="mr-1" />
-                <span className="tabular-nums">({countTotalComments(comments)})</span>
-            </div>
             {/* 点赞按钮 */}
             <button
               onClick={handleLikeToggle}
-              className={`p-1.5 rounded-md text-sm font-medium flex items-center gap-1 transition-colors duration-300 
-                ${isLiked ? 'text-red-500 hover:text-red-600 active:text-red-700' : 'text-gray-400 hover:text-gray-700 active:text-gray-900'} 
+              className={`p-1.5 rounded-md text-sm font-medium flex items-center gap-1 transition-colors duration-300
+                ${isLiked ? 'text-red-500 hover:text-red-600 active:text-red-700' : 'text-gray-400 hover:text-gray-700 active:text-gray-900'}
                 ${!token && 'opacity-50 cursor-not-allowed'}`}
               disabled={!token}
               title={!token ? "请先登录" : (isLiked ? '取消点赞' : '点赞')}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-              </svg>
+              <Heart className="h-4 w-4" fill={isLiked ? 'currentColor' : 'none'} stroke={isLiked ? 'currentColor' : 'currentColor'} />
               <span className="tabular-nums min-w-[24px] inline-block text-center">({likeCount})</span>
             </button>
             {/* 收藏按钮 */}
             <button
               onClick={handleCollectToggle}
-              className={`p-1.5 rounded-md text-sm font-medium flex items-center gap-1 transition-colors duration-300 
-                ${isCollected ? 'text-yellow-400 hover:text-yellow-300 active:text-yellow-500' : 'text-gray-400 hover:text-gray-200 active:text-gray-300'} 
+              className={`p-1.5 rounded-md text-sm font-medium flex items-center gap-1 transition-colors duration-300
+                ${isCollected ? 'text-yellow-400 hover:text-yellow-300 active:text-yellow-500' : 'text-gray-400 hover:text-gray-200 active:text-gray-300'}
                 ${!token && 'opacity-50 cursor-not-allowed'}`}
               disabled={!token}
               title={!token ? "请先登录" : (isCollected ? '取消收藏' : '收藏')}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-3.5L5 18V4z" />
-              </svg>
+              <Pin className="h-4 w-4" fill={isCollected ? 'currentColor' : 'none'} stroke={isCollected ? 'currentColor' : 'currentColor'}/>
               <span className="tabular-nums min-w-[24px] inline-block text-center">({collectCount})</span>
             </button>
             {/* 分享按钮 */}
-          <button 
+          <button
               onClick={handleShareClick}
-              className={`p-1.5 rounded-md text-sm font-medium flex items-center gap-1 transition-colors duration-300 
-                text-gray-400 hover:text-gray-200 active:text-gray-300 
+              className={`p-1.5 rounded-md text-sm font-medium flex items-center gap-1 transition-colors duration-300
+                text-gray-400 hover:text-gray-200 active:text-gray-300
                 ${!token && 'opacity-50 cursor-not-allowed'}`}
               disabled={!token}
               title={!token ? "请先登录" : "分享"}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-            </svg>
-              {shareCount > 0 && <span className="tabular-nums min-w-[24px] inline-block text-center">({shareCount})</span>}
+              <Share className="h-4 w-4" />
+              <span className="tabular-nums min-w-[24px] inline-block text-center">({shareCount})</span>
           </button>
+          {/* 评论图标和计数 */}
+          <div className="flex items-center text-sm font-medium text-gray-600">
+              {/* @ts-ignore */}
+              <MessageSquare size={16} className="mr-1" />
+              <span className="tabular-nums min-w-[24px] inline-block text-center">({countTotalComments(comments)})</span>
+          </div>
          </div>
          {/* --- 结束新增操作按钮 --- */}
 

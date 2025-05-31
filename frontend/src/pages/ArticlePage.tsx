@@ -488,9 +488,10 @@ const ArticlePage: React.FC = () => {
     
     setIsSubmittingAction(true);
     
+    // 对于ArticlePage组件，我们处理的始终是article类型
     const payload = {
       action_type: 'share',
-      target_type: 'article',
+      target_type: 'article', // 在文章详情页中，始终是分享文章
       target_id: article.id,
       content: content,
       images: images // 添加图片数据
@@ -503,9 +504,13 @@ const ArticlePage: React.FC = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
+      if (res.status === 201) {
+        toast.success('分享成功!');
         setIsShareModalOpen(false);
-      toast.success('分享成功');
-      
+        setShareComment('');
+        // 确保查询失效被调用，以便从后端获取更新后的计数
+        queryClient.invalidateQueries({ queryKey: ['articleDetails', slug] });
+      }
     } catch (err: any) {
       const errorMsg = err.response?.data?.error || '分享失败，请稍后重试';
       toast.error(`分享失败: ${errorMsg}`);
@@ -668,8 +673,8 @@ const ArticlePage: React.FC = () => {
       transition={{ duration: 0.4, delay: 0.1 }} 
     >
       {/* 移除左侧偏移，使用固定宽度和水平居中实现整体居中布局 */}
-      <main className="flex-1 transition-all duration-300 ease-in-out overflow-y-auto px-5 sm:px-8 lg:px-12 py-10 w-full">
-        <div className="max-w-2xl mx-auto">
+      <main className="flex-1 transition-all duration-300 ease-in-out overflow-y-auto px-4 sm:px-6 lg:px-4 py-10 w-full">
+        <div className="max-w-4xl mx-auto">
           {/* 文章封面 - 移到标题之前 */}
           {article.cover_image && (
             <div className="mb-8 aspect-video overflow-hidden rounded-lg shadow-2xl bg-gray-800">

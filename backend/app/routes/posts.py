@@ -984,7 +984,65 @@ def delete_post_comment(post_id, comment_id):
         return jsonify({'error': '删除评论失败'}), 500
 # --- 结束新增 --- 
 
-@posts_bp.route('post_comments/<int:comment_id>/like', methods=['POST'])
+# --- 新增：恢复已删除的帖子评论 ---
+@posts_bp.route('/<int:post_id>/comments/<int:comment_id>/restore', methods=['POST'])
+@jwt_required()
+def restore_post_comment(post_id, comment_id):
+    """恢复已软删除的帖子评论（仅评论作者或管理员可操作）"""
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if not user:
+        return jsonify({'error': '用户不存在'}), 401
+
+    # 添加详细日志
+    current_app.logger.info(f"尝试恢复评论: post_id={post_id}, comment_id={comment_id}, user_id={current_user_id}")
+    
+    # 先检查评论是否存在
+    comment = PostComment.query.filter_by(id=comment_id).first()
+    if not comment:
+        current_app.logger.error(f"评论不存在: comment_id={comment_id}")
+        return jsonify({'error': '评论未找到'}), 404
+        
+    # 然后检查帖子是否存在
+    post = Post.query.get(post_id)
+    if not post:
+        current_app.logger.error(f"帖子不存在: post_id={post_id}")
+        return jsonify({'error': '帖子不存在'}), 404
+        
+    # 检查评论是否属于该帖子
+    if comment.post_id != post_id:
+        current_app.logger.error(f"评论不属于该帖子: comment.post_id={comment.post_id}, post_id={post_id}")
+        return jsonify({'error': '评论不属于该帖子'}), 400
+
+    # 权限检查: 评论作者或管理员
+    if comment.user_id != current_user_id and not user.is_admin:
+        return jsonify({'error': '无权恢复此评论'}), 403
+
+    # 检查评论是否已删除
+    if not comment.is_deleted:
+        return jsonify({'message': '评论未被删除，无需恢复'}), 200
+
+    try:
+        comment.is_deleted = False
+        db.session.add(comment) # 标记对象已更改
+        db.session.commit()
+        
+        current_app.logger.info(f"评论恢复成功: comment_id={comment_id}")
+        
+        # 异步更新帖子的总评论数
+        try:
+            update_post_counts.delay(post_id)
+        except Exception as e:
+            current_app.logger.error(f"Failed to queue post counts update task after restoring comment {comment_id} for post {post_id}: {e}")
+
+        return jsonify({'message': '评论已成功恢复'}), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"恢复帖子评论 {comment_id} 失败: {e}")
+        return jsonify({'error': '恢复评论失败'}), 500
+# --- 结束新增 ---
+
+@posts_bp.route('/post_comments/<int:comment_id>/like', methods=['POST'])
 @jwt_required()
 def like_post_comment(comment_id):
     """点赞帖子评论"""
@@ -1024,7 +1082,7 @@ def like_post_comment(comment_id):
         current_app.logger.error(f"点赞帖子评论 {comment_id} 失败: {e}", exc_info=True)
         return jsonify({'error': f'点赞失败: {str(e)}'}), 500
 
-@posts_bp.route('post_comments/<int:comment_id>/like', methods=['DELETE'])
+@posts_bp.route('/post_comments/<int:comment_id>/like', methods=['DELETE'])
 @jwt_required()
 def unlike_post_comment(comment_id):
     """取消点赞帖子评论"""
@@ -1063,3 +1121,99 @@ def unlike_post_comment(comment_id):
         db.session.rollback()
         current_app.logger.error(f"取消点赞帖子评论 {comment_id} 失败: {e}", exc_info=True)
         return jsonify({'error': f'取消点赞失败: {str(e)}'}), 500
+
+# --- 新增：测试帖子评论恢复接口 ---
+@posts_bp.route('/test-restore/<int:post_id>/comments/<int:comment_id>', methods=['GET'])
+def test_restore_post_comment(post_id, comment_id):
+    """测试接口，用于检查帖子和评论是否存在"""
+    try:
+        # 检查帖子是否存在
+        post = Post.query.get(post_id)
+        if not post:
+            return jsonify({'error': '帖子不存在', 'post_id': post_id}), 404
+            
+        # 检查评论是否存在
+        comment = PostComment.query.get(comment_id)
+        if not comment:
+            return jsonify({'error': '评论不存在', 'comment_id': comment_id}), 404
+            
+        # 检查评论是否属于该帖子
+        if comment.post_id != post_id:
+            return jsonify({
+                'error': '评论不属于该帖子', 
+                'comment_post_id': comment.post_id, 
+                'requested_post_id': post_id
+            }), 400
+            
+        # 都存在，返回成功
+        return jsonify({
+            'success': True,
+            'post': {
+                'id': post.id,
+                'title': post.title
+            },
+            'comment': {
+                'id': comment.id,
+                'content': comment.content,
+                'is_deleted': comment.is_deleted,
+                'post_id': comment.post_id
+            }
+        })
+    except Exception as e:
+        current_app.logger.error(f"测试恢复评论失败: {str(e)}")
+        return jsonify({'error': f'测试失败: {str(e)}'}), 500
+# --- 结束新增 ---
+
+# --- 新增：编辑帖子评论 --- 
+@posts_bp.route('/<int:post_id>/comments/<int:comment_id>', methods=['PUT'])
+@jwt_required()
+def update_post_comment(post_id, comment_id):
+    """更新帖子评论（仅评论作者或管理员可操作）"""
+    try:
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({"error": "无法从令牌获取用户身份"}), 401
+
+        data = request.get_json()
+        if not data or 'content' not in data:
+            return jsonify({"error": "缺少更新内容"}), 400
+            
+        content = data['content'].strip()
+        if not content:
+            return jsonify({"error": "评论内容不能为空"}), 400
+
+        # 查找评论
+        comment = PostComment.query.get(comment_id)
+        if not comment:
+            return jsonify({"error": "评论未找到"}), 404
+
+        # 检查评论是否属于指定帖子
+        if comment.post_id != post_id:
+            return jsonify({"error": "评论不属于此帖子"}), 400
+
+        # 权限检查
+        current_user = User.query.get(user_id)
+        if not current_user:
+             return jsonify({"error": "用户信息不存在"}), 401
+        if comment.user_id != user_id and not current_user.is_admin:
+            return jsonify({"error": "您没有权限编辑此评论"}), 403
+
+        if comment.is_deleted:
+             return jsonify({"error": "已删除的评论不能编辑"}), 400
+             
+        # 保存原始内容（可选，用于日志或历史记录）
+        original_content = comment.content
+        
+        # 更新评论内容
+        comment.content = content
+        comment.is_edited = True  # 标记为已编辑
+        db.session.commit()
+        
+        current_app.logger.info(f"User {user_id} edited comment {comment_id} for post {post_id}")
+        return jsonify(comment.to_dict(include_author=True, current_user_id=user_id)), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"编辑帖子评论时出错 (Post ID: {post_id}, Comment ID: {comment_id}): {e}", exc_info=True)
+        return jsonify({"error": f"编辑评论失败: {str(e)}"}), 500
+# --- 结束新增 ---

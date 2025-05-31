@@ -22,7 +22,6 @@ const CategoryToolsPage = lazy(() => import('./pages/CategoryToolsPage'));
 const ToolDetailPage = lazy(() => import('./pages/ToolDetailPage'));
 const ToolGeneratorPage = lazy(() => import('./pages/ToolGeneratorPage'));
 const ToolsPage = lazy(() => import('./pages/ToolsPage'));
-// const ChatPage = lazy(() => import('./pages/ChatPage'));
 const ArticleListPage = lazy(() => import('./pages/ArticleListPage'));
 const PostsListPage = lazy(() => import('./pages/PostsListPage'));
 const ArticlePage = lazy(() => import('./pages/ArticlePage'));
@@ -35,9 +34,9 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
 const UserActivitiesPage = lazy(() => import('./pages/UserActivitiesPage'));
 const MainLayout = lazy(() => import('./layouts/MainLayout'));
-const RelationshipTopicPage = lazy(() => import('./pages/RelationshipTopicPage'));
 const DynamicDetailPage = lazy(() => import('./pages/DynamicDetailPage'));
 const UserSpacePage = lazy(() => import('./pages/UserSpacePage'));
+const AdminTopicApprovalPage = lazy(() => import('./pages/AdminTopicApprovalPage'));
 
 const ProtectRoute = ({ children }: { children: React.ReactElement }) => {
   return <AuthGuard requireAuth={true}>{children}</AuthGuard>;
@@ -210,8 +209,6 @@ const App: React.FC = () => {
                 <Route path="/community" element={<Community />} />
                 <Route path="/community/topic/:topicSlug" element={<CommunityTopicPage />} />
                 <Route path="/community/topic/:topicSlug/posts/:postSlug" element={<PostDetailPage />} />
-                <Route path="/community/relationship-topic/:slug" element={<RelationshipTopicPage />} />
-                <Route path="/community/relationship-topic/:relationshipSlug/posts/:postSlug" element={<PostDetailPage />} />
                 <Route path="/community/:community_slug/new-post" element={<ProtectRoute><NewCommunityPostPageToast /></ProtectRoute>} />
                 <Route path="/posts/:postSlug" element={<PostDetailPage />} />
                 <Route path="/dynamic/:actionId" element={<DynamicDetailPage />} />
@@ -236,6 +233,7 @@ const App: React.FC = () => {
                 <Route path="/users/:userId/activities" element={<UserActivitiesPage />} />
                 <Route path="/edit-post/:post_slug" element={<ProtectRoute><EditPostPageToast /></ProtectRoute>} />
                 <Route path="/space" element={<ProtectRoute><UserSpacePage /></ProtectRoute>} />
+                <Route path="/admin/approve-topics" element={<ProtectRoute><AdminTopicApprovalPage /></ProtectRoute>} />
                 <Route path="*" element={<NotFoundPage />} />
               </Route>
             </Routes>

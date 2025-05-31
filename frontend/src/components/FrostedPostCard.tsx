@@ -15,9 +15,10 @@
  * 接收帖子数据对象 (post) 以及其所属的父主题类型/Slug 作为 props。
  * 根据父主题信息构建指向帖子详情页的正确链接 (Link)。
  */
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import { Heart, Pin, Share, Message } from '@mynaui/icons-react';
 
 // --- 父主题类型 ---
 type ParentTopicType = 'topic' | 'relationship';
@@ -25,7 +26,7 @@ type ParentTopicType = 'topic' | 'relationship';
 interface Post {
   id: number;
   title: string;
-  author: any; // 可以是对象或字符串 
+  author: any; // Can be object { id, nickname, email, avatar } or string
   content?: string; // 帖子内容字段
   excerpt?: string;
   summary?: string; // 从API返回的数据使用 summary
@@ -44,12 +45,30 @@ interface Post {
   collect_count?: number;
   comment_count?: number;
   share_count?: number;
+  // User interaction status - to be passed from parent
+  is_liked?: boolean;
+  is_collected?: boolean;
+}
+
+// Define MediaItem type for the carousel
+interface MediaItem {
+  type: 'image' | 'youtube' | 'bilibili';
+  src: string; // Original URL for images, embed URL for videos
+  alt?: string; // For images
 }
 
 interface FrostedPostCardProps {
   post: Post;
   parentType: ParentTopicType;
   parentSlug: string | undefined; // 父 Slug 可能未定义
+  // Interaction handlers from parent
+  onLikeToggle: (postId: number) => void;
+  onCollectToggle: (postId: number) => void;
+  onCommentClick: (postId: number) => void;
+  onShareClick: (postId: number) => void;
+  // Optional: pass these if parent manages granular state per post
+  // isLiked?: boolean; 
+  // isCollected?: boolean;
 }
 
 // 从 HTML 获取纯文本预览的辅助函数
@@ -90,7 +109,53 @@ const getContentPreview = (htmlContent: string | null | undefined, maxLength: nu
   return text;
 };
 
-const FrostedPostCard: React.FC<FrostedPostCardProps> = ({ post, parentType, parentSlug }) => {
+// 自定义视频框架组件，强制16:9比例
+const VideoFrame = ({ src, title = '' }: { src: string, title?: string }) => {
+  return (
+    <div 
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '0',
+        paddingBottom: '56.25%', // 16:9 比例
+        backgroundColor: '#000',
+        overflow: 'hidden',
+        borderRadius: '8px'
+      }}
+    >
+      <iframe
+        src={src}
+        title={title}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          border: 'none'
+        }}
+        allowFullScreen
+        loading="lazy"
+        frameBorder="0"
+        scrolling="no"
+      />
+    </div>
+  );
+};
+
+const FrostedPostCard: React.FC<FrostedPostCardProps> = ({ 
+  post, 
+  parentType, 
+  parentSlug,
+  onLikeToggle,
+  onCollectToggle,
+  onCommentClick,
+  onShareClick
+}) => {
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [textualContent, setTextualContent] = useState('');
+
   // 格式化日期显示
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
@@ -111,22 +176,23 @@ const FrostedPostCard: React.FC<FrostedPostCardProps> = ({ post, parentType, par
     }
   };
 
-  // 获取作者名称
-  const getAuthorName = () => {
+  // 获取作者名称、头像、ID
+  const authorName = (() => {
     if (!post.author) return '匿名';
-    
-    // 如果 author 是字符串直接返回
     if (typeof post.author === 'string') return post.author;
-    
-    // 优先显示昵称
-    if (post.author.nickname) return post.author.nickname;
-    
-    // 如果有 email 但没有昵称，显示 email
-    if (post.author.email) return post.author.email;
-    
-    // 如果都没有才显示匿名
-    return '匿名';
-  };
+    return post.author.nickname || post.author.email?.split('@')[0] || '匿名';
+  })();
+
+  const authorAvatar = (() => {
+    if (post.author && typeof post.author === 'object' && post.author.avatar) {
+      return post.author.avatar;
+    }
+    // Placeholder avatar based on first letter of name
+    const initial = (authorName || 'A').charAt(0).toUpperCase();
+    return `https://via.placeholder.com/40/374151/FFFFFF?text=${initial}`;
+  })();
+  
+  const authorId = post.author && typeof post.author === 'object' ? post.author.id : null;
 
   // 构建帖子链接
   const buildPostUrl = () => {
@@ -140,14 +206,78 @@ const FrostedPostCard: React.FC<FrostedPostCardProps> = ({ post, parentType, par
     }
   };
 
-  // 尝试获取内容，首先使用content字段，如果没有则尝试使用summary字段
   const postContent = post.content || post.summary || post.excerpt || '';
+
+  // 使用与ArticlePage.tsx相同的正则表达式和处理方式
+  useEffect(() => {
+    if (!postContent) {
+      setMediaItems([]);
+      setTextualContent('');
+      return;
+    }
+    
+    let processedText = postContent;
+    const extractedMedia: MediaItem[] = [];
+
+    // 1. 处理并提取Markdown图片
+    const markdownImageRegex = /!\[(.*?)\]\((https?:\/\/[^)]+)\)/g;
+    let match;
+    while ((match = markdownImageRegex.exec(postContent)) !== null) {
+      const alt = match[1] || '';
+      const url = match[2];
+      if (url) {
+        extractedMedia.push({ type: 'image', src: url, alt });
+      }
+    }
+    
+    // 从文本中去除已提取的图片
+    processedText = processedText.replace(markdownImageRegex, '<!-- image -->');
+    
+    // 2. 处理并提取YouTube视频
+    const youtubeRegex = /\[视频占位符:\s*(https?:\/\/(?:www\.)?(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+))\]/g;
+    while ((match = youtubeRegex.exec(postContent)) !== null) {
+      const videoId = match[2];
+      if (videoId) {
+        extractedMedia.push({ 
+          type: 'youtube', 
+          src: `https://www.youtube.com/embed/${videoId}` 
+        });
+      }
+    }
+    
+    // 从文本中去除已提取的YouTube视频
+    processedText = processedText.replace(youtubeRegex, '<!-- youtube -->');
+    
+    // 3. 处理并提取Bilibili视频
+    const bilibiliRegex = /\[视频占位符:\s*(https?:\/\/(?:www\.)?bilibili\.com\/video\/([A-Za-z0-9]+)(?:\/)?.*?)\]/g;
+    while ((match = bilibiliRegex.exec(postContent)) !== null) {
+      const videoId = match[2];
+      if (videoId) {
+        extractedMedia.push({ 
+          type: 'bilibili', 
+          src: `https://player.bilibili.com/player.html?bvid=${videoId}&page=1` 
+        });
+      }
+    }
+    
+    // 从文本中去除已提取的Bilibili视频
+    processedText = processedText.replace(bilibiliRegex, '<!-- bilibili -->');
+
+    console.log('提取的媒体项:', extractedMedia);
+    setMediaItems(extractedMedia);
+    setTextualContent(processedText);
+    
+  }, [postContent]);
 
   // 获取互动数据，兼容不同命名
   const likesCount = post.likes_count !== undefined ? post.likes_count : post.like_count;
   const collectsCount = post.collects_count !== undefined ? post.collects_count : post.collect_count;
   const commentsCount = post.comments_count !== undefined ? post.comments_count : (post.comment_count !== undefined ? post.comment_count : post.comments);
   const sharesCount = post.shares_count !== undefined ? post.shares_count : post.share_count;
+
+  // Current interaction states from post object (assuming parent updates this post object on interaction)
+  const isLiked = post.is_liked || false;
+  const isCollected = post.is_collected || false;
 
   // 新增：预加载打开新标签页的函数
   // useCallback 用于确保此函数在父组件重渲染时不被不必要地重新创建，
@@ -164,125 +294,172 @@ const FrostedPostCard: React.FC<FrostedPostCardProps> = ({ post, parentType, par
 
   const postUrl = buildPostUrl(); // 获取帖子详情页的URL
 
+  const handlePrevMedia = () => {
+    setCurrentMediaIndex(prev => (prev > 0 ? prev - 1 : mediaItems.length - 1));
+  };
+
+  const handleNextMedia = () => {
+    setCurrentMediaIndex(prev => (prev < mediaItems.length - 1 ? prev + 1 : 0));
+  };
+
   return (
     <div 
-      className="rounded-lg overflow-hidden 
-                 bg-gray-100
-                 shadow-lg hover:shadow-xl 
-                 transform transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1
-                 flex flex-col"
+      className="bg-white shadow-lg rounded-lg p-5 mb-6 transition-shadow duration-300 hover:shadow-xl"
     >
-      <div className="p-3">
-          {/* 
-            修改导航逻辑：
-            - 将 react-router-dom 的 <Link> 组件替换为普通的 <a> 标签。
-            - 为 <a> 标签添加 onClick 事件处理器，调用 openInNewTabWithPreload 函数。
-            - 保留 href 属性，这样用户仍然可以右键点击链接进行"在新标签页中打开"、"复制链接地址"等标准浏览器操作。
-            - 添加 cursor-pointer 样式，以提供视觉反馈，表明该元素是可点击的。
-            - 将帖子标题作为 title 属性添加到 <a> 标签，鼠标悬停时可以显示完整标题。
-          */}
-          <a 
-            href={postUrl} 
-            onClick={openInNewTabWithPreload(postUrl)}
-            className="hover:text-blue-600 transition-colors mb-2 block cursor-pointer"
-            title={post.title} 
-          >
-            <h3 className="text-lg font-semibold text-black line-clamp-1">{post.title}</h3>
-          </a>
+      {/* Author Info & Date */}
+      <div className="flex items-center text-sm text-gray-700 mb-4">
+        <img 
+          src={authorAvatar} 
+          alt={authorName} 
+          className="w-10 h-10 rounded-full mr-3 object-cover bg-gray-200"
+          onError={(e) => { 
+            // Fallback for broken avatar links
+            const initial = (authorName || 'A').charAt(0).toUpperCase();
+            (e.target as HTMLImageElement).src = `https://via.placeholder.com/40/374151/FFFFFF?text=${initial}`;
+          }}
+        />
+        <div className="flex-grow">
+          {authorId ? (
+            <Link to={`/profile/${authorId}`} className="font-semibold text-gray-800 hover:text-blue-600 hover:underline">
+              {authorName}
+            </Link>
+          ) : (
+            <span className="font-semibold text-gray-800">{authorName}</span>
+          )}
+          <p className="text-xs text-gray-500">{formatDate(post.created_at || post.timestamp)}</p>
+        </div>
+      </div>
+
+      {/* Title (link to post) */}
+      <a 
+        href={postUrl} 
+        onClick={openInNewTabWithPreload(postUrl)}
+        className="hover:text-blue-700 transition-colors duration-200 block cursor-pointer group"
+        title={post.title} 
+      >
+        <h2 className="text-2xl font-bold text-black mb-3 group-hover:underline">{post.title}</h2>
+      </a>
           
-        {/* 直接显示完整内容 */}
-        {postContent && (
-          <div className="text-gray-700 text-sm my-4 post-content-container">
-            <style>{`
-              .post-content-container img, 
-              .post-content-container video,
-              .post-content-container iframe,
-              .post-content-container figure {
-                margin-left: auto;
-                margin-right: auto;
-                display: block;
-                max-width: 100%;
-              }
-              .post-content-container .post-content p {
-                margin-bottom: 1rem;
-              }
-              .post-content-container a {
-                color: #60a5fa;
-                text-decoration: none;
-              }
-              .post-content-container a:hover {
-                text-decoration: underline;
-              }
-            `}</style>
+      {/* Content */}
+      {/* Render textual content first */}
+      {textualContent && (
+        <div 
+          className="prose prose-sm sm:prose-base max-w-none article-content text-gray-800 leading-relaxed mb-5"
+          dangerouslySetInnerHTML={{ __html: textualContent }} 
+        />
+      )}
+
+      {/* Media Carousel/Display - 使用自定义VideoFrame组件 */}
+      {mediaItems.length > 0 && (
+        <div className="media-carousel relative mb-5">
+          {mediaItems.map((item, index) => (
             <div 
-              className="post-content" 
-              dangerouslySetInnerHTML={{ 
-                __html: postContent
-                  // 将Markdown格式的图片链接 ![alt](url) 转换为HTML的<img>标签
-                  .replace(/!\[(.*?)\]\((https?:\/\/[^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%; display:block; margin:0 auto;">')
-                  // 处理YouTube视频占位符，添加16:9容器
-                  .replace(/\[视频占位符:\s*(https?:\/\/(?:www\.)?(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+))\]/g, (match, originalUrl, videoId) => `
-                    <figure class="not-prose video-figure" style="all: initial; display: block; text-align: center; width: 100%; margin: 1.5em 0; font-family: inherit; color: inherit;">
-                      <div class="video-wrapper" style="width: 100%; max-width: 720px; margin: 0 auto; aspect-ratio: 16/9; background: #000; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); overflow: hidden; position: relative;">
-                        <iframe src="https://www.youtube.com/embed/${videoId}?autoplay=0&mute=0&controls=1" class="video-iframe" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 8px;" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen title="Embedded YouTube Video"></iframe>
-                      </div>
-                    </figure>
-                  `)
-                  // 处理Bilibili视频占位符，添加16:9容器
-                  .replace(/\[视频占位符:\s*(https?:\/\/(?:www\.)?bilibili\.com\/video\/([A-Za-z0-9]+)(?:\/)?.*?)\]/g, (match, originalUrl, videoId) => `
-                    <figure class="not-prose video-figure" style="all: initial; display: block; text-align: center; width: 100%; margin: 1.5em 0; font-family: inherit; color: inherit;">
-                      <div class="video-wrapper" style="width: 100%; max-width: 720px; margin: 0 auto; aspect-ratio: 16/9; background: #000; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); overflow: hidden; position: relative;">
-                        <iframe src="https://player.bilibili.com/player.html?bvid=${videoId}&page=1&high_quality=1&danmaku=0&autoplay=0" class="video-iframe" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 8px;" frameborder="0" scrolling="no" allowfullscreen title="Embedded Bilibili Video"></iframe>
-                      </div>
-                    </figure>
-                  `)
-              }} 
-            />
-          </div>
-        )}
+              key={index} 
+              className={`media-item ${index === currentMediaIndex ? 'block' : 'hidden'} w-full`}
+            >
+              {item.type === 'image' && (
+                <div style={{ width: '100%', height: 'auto', aspectRatio: '16/9', overflow: 'hidden', borderRadius: '8px' }}>
+                  <img 
+                    src={item.src} 
+                    alt={item.alt || '图片'} 
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'cover' 
+                    }}
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                </div>
+              )}
+              {item.type === 'youtube' && (
+                <VideoFrame 
+                  src={item.src} 
+                  title="YouTube视频"
+                />
+              )}
+              {item.type === 'bilibili' && (
+                <VideoFrame
+                  src={item.src} 
+                  title="Bilibili视频"
+                />
+              )}
+            </div>
+          ))}
+          
+          {mediaItems.length > 1 && (
+            <>
+              <button 
+                onClick={handlePrevMedia}
+                className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity text-lg"
+                aria-label="Previous media"
+              >
+                &#x276E;
+              </button>
+              <button 
+                onClick={handleNextMedia}
+                className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-opacity text-lg"
+                aria-label="Next media"
+              >
+                &#x276F;
+              </button>
+              
+              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                {mediaItems.map((_, index) => (
+                  <button 
+                    key={`dot-${index}`}
+                    onClick={() => setCurrentMediaIndex(index)}
+                    className={`w-2.5 h-2.5 rounded-full ${index === currentMediaIndex ? 'bg-white' : 'bg-gray-400 bg-opacity-75 hover:bg-white transition-colors'}`}
+                    aria-label={`Go to media ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
         
-        {/* 底部作者信息和互动数据 */}
-        <div className="flex justify-between items-end mt-4">
-          <div className="flex gap-3 text-xs text-gray-500">
-        {likesCount !== undefined && (
-          <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-            <span>{likesCount || 0}</span>
-          </div>
-        )}
-        
-        {commentsCount !== undefined && (
-          <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            <span>{commentsCount || 0}</span>
-          </div>
-        )}
-        
-        {collectsCount !== undefined && (
-          <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
-            <span>{collectsCount || 0}</span>
-          </div>
-        )}
-        
-        {sharesCount !== undefined && (
-          <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
-            <span>{sharesCount || 0}</span>
-          </div>
-        )}
-          </div>
-          <div className="text-xs text-gray-500">
-            <span>由 {getAuthorName()} 发布于 {formatDate(post.created_at || post.timestamp)}</span>
-          </div>
+      {/* Interaction Bar (Likes, Collects, Comments, Share) */}
+      <div className="mt-auto pt-4 border-t border-gray-200 flex items-center justify-between text-gray-600">
+        <div className="flex items-center space-x-4">
+          {/* Like Button */}
+          <button 
+            onClick={() => onLikeToggle(post.id)} 
+            className={`flex items-center hover:text-pink-500 transition-colors duration-150 ${isLiked ? 'text-pink-500' : 'text-gray-500'}`}
+            aria-label="Like post"
+          >
+            <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : 'fill-none'}`} />
+            <span className="ml-1.5 text-sm">{likesCount !== undefined ? likesCount : 0}</span>
+          </button>
+
+          {/* Collect Button (Pin) */}
+          <button 
+            onClick={() => onCollectToggle(post.id)} 
+            className={`flex items-center hover:text-yellow-500 transition-colors duration-150 ${isCollected ? 'text-yellow-500' : 'text-gray-500'}`}
+            aria-label="Collect post"
+          >
+            <Pin className={`w-5 h-5 ${isCollected ? 'fill-current' : 'fill-none'}`} />
+            <span className="ml-1.5 text-sm">{collectsCount !== undefined ? collectsCount : 0}</span>
+          </button>
+
+          {/* Share Button - Moved to the left group */}
+          <button 
+            onClick={() => onShareClick(post.id)} 
+            className="flex items-center text-gray-500 hover:text-green-500 transition-colors duration-150"
+            aria-label="Share post"
+          >
+            <Share className="w-5 h-5" />
+            <span className="ml-1.5 text-sm">{sharesCount !== undefined ? sharesCount : 0}</span>
+          </button>
+
+          {/* Comment Button/Link */}
+          <button 
+            onClick={() => onCommentClick(post.id)} 
+            className="flex items-center text-gray-500 hover:text-blue-500 transition-colors duration-150"
+            aria-label="View comments"
+          >
+            <Message className="w-5 h-5" />
+            <span className="ml-1.5 text-sm">{commentsCount !== undefined ? commentsCount : 0}</span>
+          </button>
         </div>
       </div>
     </div>

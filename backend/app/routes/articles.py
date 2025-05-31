@@ -38,7 +38,7 @@ from app.utils.cos_storage import cos_storage  # 导入COS存储工具类
 from flask_cors import cross_origin
 import json
 # 导入article_utils模块
-from app.utils.article_utils import update_article_view_count, get_article_by_slug, get_article_by_id
+from app.utils.article_utils import update_article_view_count, get_article_by_slug, get_article_by_id, get_cached_articles_list, invalidate_article_list_cache, fetch_articles_from_db
 
 articles_bp = Blueprint('articles', __name__, template_folder='../../templates')
 
@@ -272,133 +272,56 @@ def get_article_tags():
 
 @articles_bp.route('/', methods=['GET'])
 def get_articles_api():
-    """获取所有文章或按类别/标签筛选文章，并包含系列信息，支持指定返回字段"""
+    """获取文章列表API，支持分页、排序和筛选
 
-    # --- GET 请求处理逻辑 ---
-    print(f"\n*** DEBUG [articles.py]: Entered get_articles_api (GET). Request Path={request.path} ***\n", flush=True)
-    category = request.args.get('category')
-    tag = request.args.get('tag') 
-    limit = request.args.get('limit', 10, type=int)
-    offset = request.args.get('offset', 0, type=int)
-    sort_by = request.args.get('sort_by', 'created_at')
-    sort_order = request.args.get('sort_order', 'desc')
-    fields_str = request.args.get('fields') 
-    requested_fields = set(fields_str.split(',')) if fields_str else None
+    查询参数:
+    - limit: 每页文章数量，默认15
+    - offset: 偏移量，默认0
+    - category: 分类筛选，默认无
+    - tag: 标签筛选，默认无
+    - sort_by: 排序字段，默认created_at
+    - sort_order: 排序顺序，默认desc
+    - fields: 返回的字段列表，逗号分隔，默认返回所有字段
+    """
+    try:
+        # 收集所有查询参数
+        params = {
+            'limit': request.args.get('limit', 15, type=int),
+            'offset': request.args.get('offset', 0, type=int),
+            'category': request.args.get('category', ''),
+            'tag': request.args.get('tag', ''),
+            'sort_by': request.args.get('sort_by', 'created_at'),
+            'sort_order': request.args.get('sort_order', 'desc'),
+            'fields': request.args.get('fields', ''),
+        }
 
-    # --- 再次修改: 使用正确的 relationship 名称 'author_user' --- 
-    query = Article.query.options(joinedload(Article.author_user))
-    # --- 结束修改 ---
-    
-    # 原有的过滤条件保持不变
-    query = query.filter(Article.is_published == True, Article.is_deleted == False)
-    
-    if category:
-        query = query.filter_by(category=category)
-    
-    if tag:
-        query = query.filter(Article.tags.contains(cast(tag, JSONB)))
+        # 添加详细日志，帮助调试
+        current_app.logger.info(f"获取文章列表，参数: {params}")
         
-    if sort_by in ['title', 'created_at', 'updated_at', 'view_count']:
-        order_column = getattr(Article, sort_by)
-        query = query.order_by(desc(order_column) if sort_order == 'desc' else order_column)
-    else:
-        query = query.order_by(desc(Article.created_at))
-    
-    total = query.count()
-    articles_from_db = query.offset(offset).limit(limit).all()
-    
-    processed_articles = []
-    for article in articles_from_db:
-        if requested_fields:
-            # If specific fields are requested, construct dict carefully
-            # Rely on article.to_dict() for author info if requested
-            base_article_dict_for_fields = article.to_dict(include_content=('content' in requested_fields))
-            article_dict = {}
-
-            for field in requested_fields:
-                if field == 'author':
-                    article_dict['author'] = base_article_dict_for_fields.get('author')
-                elif field in base_article_dict_for_fields:
-                    article_dict[field] = base_article_dict_for_fields[field]
-                elif hasattr(article, field): # Fallback for fields not in to_dict but on model
-                    if field in ['created_at', 'updated_at'] and getattr(article, field):
-                        article_dict[field] = getattr(article, field).isoformat() + 'Z'
-                    else:
-                        article_dict[field] = getattr(article, field)
+        # 使用缓存函数获取文章列表
+        result = get_cached_articles_list(params)
             
-            # Ensure essential fields are present if not explicitly requested but implied
-            if 'id' not in article_dict and ('id' in requested_fields or not requested_fields): # id is always good to have
-                 article_dict['id'] = article.id
-            if 'title' not in article_dict and ('title' in requested_fields or not requested_fields):
-                 article_dict['title'] = article.title
-            if 'slug' not in article_dict and ('slug' in requested_fields or not requested_fields):
-                 article_dict['slug'] = article.slug
-
-        else:
-            # Default behavior: return standard dict from article.to_dict()
-            # This should already include the author with avatar if author_user is loaded.
-            article_dict = article.to_dict(include_content=False)
-
-        # --- 系列信息处理 (恢复代码) ---
-        # Only fetch/add series info if 'series_articles' is requested or no fields specified
-        # --- 恢复 ---
-        if not requested_fields or 'series_articles' in requested_fields:
-            series_list_for_frontend = []
-            if article.series_name and article.user_id:
-                 series_query = Article.query.filter(
-                    Article.user_id == article.user_id,
-                    Article.series_name == article.series_name,
-                    Article.is_published == True
-                ).order_by(Article.series_order, Article.created_at).all()
-
-                 for series_item in series_query:
-                     series_list_for_frontend.append({
-                        'id': series_item.id,
-                        'title': series_item.title,
-                        'slug': series_item.slug,
-                        'series_order': series_item.series_order or 0,
-                        'is_current': series_item.id == article.id
-                     })
-            article_dict['series_articles'] = series_list_for_frontend
-        # --- 结束恢复 ---
-        # --- 结束系列信息处理 ---
-
-        # --- 计算点赞等统计信息 (恢复代码) ---
-        # Only calculate counts if requested or no fields specified
-        # --- 恢复 ---
-        if not requested_fields or any(f in requested_fields for f in ['like_count', 'collect_count', 'share_count', 'comment_count']):
-            like_count = UserAction.query.filter_by(
-                action_type='like',
-                target_type='article',
-                target_id=article.id
-            ).count()
-            collect_count = UserAction.query.filter_by(
-                action_type='collect',
-                target_type='article',
-                target_id=article.id
-            ).count()
-            share_count = UserAction.query.filter_by(
-                action_type='share',
-                target_type='article',
-                target_id=article.id
-            ).count()
-            comment_count = Comment.query.filter_by(article_id=article.id).count()
-
-            # Add counts to dict if requested or by default
-            if not requested_fields or 'like_count' in requested_fields:
-                article_dict['like_count'] = like_count
-            if not requested_fields or 'collect_count' in requested_fields:
-                article_dict['collect_count'] = collect_count
-            if not requested_fields or 'share_count' in requested_fields:
-                 article_dict['share_count'] = share_count
-            if not requested_fields or 'comment_count' in requested_fields:
-                article_dict['comment_count'] = comment_count
-        # --- 结束恢复 ---
-        # --- 结束统计信息计算 ---
-
-        processed_articles.append(article_dict)
+        # 检查结果是否有效
+        if not result or not isinstance(result, dict):
+            current_app.logger.error(f"缓存函数返回无效结果: {result}")
+            result = {'articles': [], 'total': 0}
+            
+        # 确保结果包含所需的键
+        if 'articles' not in result:
+            current_app.logger.warning("结果中缺少'articles'键，添加空列表")
+            result['articles'] = []
+            
+        if 'total' not in result:
+            current_app.logger.warning("结果中缺少'total'键，添加0")
+            result['total'] = 0
         
-    return jsonify({"articles": processed_articles, "total": total})
+        # 添加日志记录返回结果
+        current_app.logger.info(f"文章列表API返回: {len(result.get('articles', []))}篇文章，总数: {result.get('total', 0)}")
+        
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.error(f"获取文章列表失败: {str(e)}", exc_info=True)
+        return jsonify({"error": "获取文章列表失败"}), 500
 
 @articles_bp.route('/<int:id>', methods=['GET'])
 def get_article_api(id):
@@ -580,6 +503,10 @@ def create_article_api():
         current_app.logger.info(f"文章创建成功: ID={article.id}, slug={article.slug}, 封面图片={article.cover_image}")
         # 生成并更新嵌入向量 (如果需要)
         # VectorStore.update_article_embedding(article.id) # --- 注释掉向量嵌入调用 --- 
+        
+        # 添加：在创建文章后失效文章列表缓存
+        invalidate_article_list_cache()
+        
         return jsonify(article.to_dict()), 201
     except Exception as e:
         db.session.rollback()
@@ -724,6 +651,10 @@ def update_article_api(slug):
         current_app.logger.info(f"文章更新成功: ID={article.id}, slug={article.slug}, 封面图片={article.cover_image}")
         # if needs_vector_update:
         #    VectorStore.update_article_embedding(article.id) # --- 注释掉向量嵌入调用 ---
+        
+        # 添加：在更新文章后失效文章列表缓存
+        invalidate_article_list_cache()
+        
         return jsonify(article.to_dict())
     except Exception as e:
         db.session.rollback()
@@ -761,6 +692,10 @@ def delete_article_api(slug):
         db.session.commit()
         
         current_app.logger.info(f"文章已软删除: ID={article.id}, slug={article.slug}")
+        
+        # 添加：在删除文章后失效文章列表缓存
+        invalidate_article_list_cache()
+        
         return jsonify({"message": "文章删除成功"}), 200
     except Exception as e:
         # 确保回滚任何未完成的事务

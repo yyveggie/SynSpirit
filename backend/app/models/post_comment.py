@@ -39,6 +39,10 @@ class PostComment(db.Model):
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
     # --- 结束新增 ---
     
+    # --- 新增 is_edited 字段 ---
+    is_edited = db.Column(db.Boolean, default=False, nullable=False, server_default=text('false'))
+    # --- 结束新增 ---
+    
     # --- 新增：点赞计数字段 ---
     likes_count = db.Column(db.Integer, default=0, nullable=False, index=True)
     # replies_count 也可以考虑添加，如果需要频繁展示回复数
@@ -131,7 +135,8 @@ class PostComment(db.Model):
             'is_deleted': getattr(self, 'is_deleted', False),
             'is_liked_by_current_user': is_liked_by_current_user,
             'user': user_info_for_dict, # 使用上面准备好的用户信息
-            'is_ai_generated': getattr(self, 'is_ai_generated', False) # 保留这一行，删除重复行
+            'is_ai_generated': getattr(self, 'is_ai_generated', False), # 保留这一行，删除重复行
+            'is_edited': getattr(self, 'is_edited', False)
         }
 
         # 只在需要且用户存在时添加用户信息 (此段逻辑已整合到 user_info_for_dict)
