@@ -22,3 +22,6 @@ dump.rdb
 .frontend_pid
 .celery_pid
 .cursor/
+migrations/
+plan/
+docs/
