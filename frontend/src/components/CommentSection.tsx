@@ -1000,7 +1000,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     const hasReplies = comment.replies && comment.replies.length > 0;
     const repliesCount = hasReplies ? countTotalComments(comment.replies) : 0;
     const isEdited = comment.is_edited === true;
-    
+
     return (
       <div key={comment.id} 
            className={`comment-item ${depth > 0 ? 'ml-5 md:ml-6' : ''} py-3 relative`}>
@@ -1084,9 +1084,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                     style={{color: 'black'}} 
                     className="text-sm mt-1 whitespace-pre-wrap break-words inline-block"
                   >
-                  {comment.is_ai_generated ? (
-                    <span className="text-purple-600 dark:text-purple-400">{comment.content}</span>
-                  ) : isDeleted ? (
+                {comment.is_ai_generated ? (
+                  <span className="text-purple-600 dark:text-purple-400">{comment.content}</span>
+                ) : isDeleted ? (
                     // 已删除评论的显示，红色文字
                     <div className="flex items-center">
                       <span className="text-red-400">[该评论已删除]</span>
@@ -1104,10 +1104,10 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                         </button>
                       )}
                     </div>
-                  ) : (
-                      <span style={{color: 'black'}}>{comment.content}</span>
-                  )}
-                </p>
+                ) : (
+                  <span style={{color: 'black'}}>{comment.content}</span>
+                )}
+              </p>
                 )}
               </div>
               
@@ -1143,9 +1143,9 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                       className={`text-xs ${isReplying ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'} flex items-center mr-4 flex-shrink-0`}
                       disabled={!authToken} title={!authToken ? "请先登录" : (isReplying ? "取消回复" : "回复")}>
                       <div className="w-3.5 h-3.5 flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
                       </div>
                     </button>
                     
@@ -1163,13 +1163,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                           fill={isLikedByCurrentUser ? "#ef4444" : "none"} 
                           style={{color: isLikedByCurrentUser ? "#ef4444" : undefined}}
                         />
-                      </div>
+                        </div>
                       {currentLikeCount > 0 && (
                         <span className="absolute -right-3 -top-1 text-[10px] font-medium bg-gray-100 rounded-full px-1 min-w-[14px] text-center">
                           {currentLikeCount}
                         </span>
                       )}
-                    </button>
+                      </button>
 
                     {/* 添加编辑按钮 */}
                     {canEdit && (
@@ -1183,7 +1183,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                             className="w-full h-full" 
                             stroke="currentColor"
                           />
-                        </div>
+                    </div>
                       </button>
                     )}
                     

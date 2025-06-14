@@ -342,7 +342,7 @@ def invalidate_article_list_cache():
     返回:
         int: 失效的缓存项数量
     """
-    pattern = "synspirit:data:article_list:*"
+    pattern = "data:article_list:*"
     count = DataCache.invalidate_pattern(pattern)
     current_app.logger.info(f"已失效 {count} 个文章列表缓存")
     return count 

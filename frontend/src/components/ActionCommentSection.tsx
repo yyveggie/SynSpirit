@@ -254,7 +254,7 @@ const CommentItem: React.FC<CommentItemProps> = memo(({
                             </div>
                         </div>
                     ) : (
-                        <p className={`text-sm whitespace-pre-wrap break-words mb-1.5 ${comment.is_deleted ? 'text-gray-500 italic' : (isAIReply ? 'text-purple-800' : 'text-gray-900')}`}>{comment.content}</p>
+                    <p className={`text-sm whitespace-pre-wrap break-words mb-1.5 ${comment.is_deleted ? 'text-gray-500 italic' : (isAIReply ? 'text-purple-800' : 'text-gray-900')}`}>{comment.content}</p>
                     )}
                     {!comment.is_deleted && !isEditing && (
                         <div className="flex items-center gap-3 mt-1">

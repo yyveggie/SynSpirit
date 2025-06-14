@@ -297,6 +297,10 @@ const NewArticlePageToast: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['articleDetails', slug] });
       }
       
+      // 无论是新建还是编辑文章，都需要使首页的最新文章列表缓存失效
+      console.log('[NewArticlePageToast] 使最新文章列表缓存失效');
+      queryClient.invalidateQueries({ queryKey: ['latestArticles'] });
+      
       // 延迟跳转，让用户看到成功消息
       setTimeout(() => {
         navigate(`/article/${response.data.slug}`);

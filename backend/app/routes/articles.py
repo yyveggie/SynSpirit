@@ -39,6 +39,7 @@ from flask_cors import cross_origin
 import json
 # 导入article_utils模块
 from app.utils.article_utils import update_article_view_count, get_article_by_slug, get_article_by_id, get_cached_articles_list, invalidate_article_list_cache, fetch_articles_from_db
+import sqlalchemy.exc
 
 articles_bp = Blueprint('articles', __name__, template_folder='../../templates')
 
@@ -517,149 +518,182 @@ def create_article_api():
 @jwt_required()
 def update_article_api(slug):
     """更新文章信息 (处理 FormData 和文件上传)"""
-    article = Article.query.filter_by(slug=slug).first_or_404()
-    
-    # 获取当前用户ID。注意：get_jwt_identity() 返回的就是用户ID（int），不是字典，因此不能用 ['id'] 取值。
+    # 获取当前用户ID
     current_user_id = get_jwt_identity()
-    if article.user_id != current_user_id:
-        return jsonify({'error': '无权修改此文章'}), 403
-        
-    # 修改: 从 request.form 和 request.files 获取数据
-    title = request.form.get('title')
-    content = request.form.get('content')
-    summary = request.form.get('summary')
-    category = request.form.get('category')
+    if not current_user_id:
+        return jsonify({'error': '无法获取用户信息，请重新登录'}), 401
     
-    # 获取并处理标签 - 修复标签处理，确保能识别中英文逗号
-    tags_list_raw = request.form.getlist('tags') # 获取 tag 列表
+    # 记录操作开始
+    current_app.logger.info(f"开始处理文章更新请求: slug={slug}, user_id={current_user_id}")
     
-    # 调试日志：记录原始收到的 tags 
-    current_app.logger.info(f"[update_article_api] 收到的原始标签: {tags_list_raw}")
+    # 创建一个全新的会话，避免使用可能已过期的会话
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy import create_engine
     
-    # 后端二次处理标签 - 增强处理逻辑，支持中英文逗号 
-    tags = []
-    if tags_list_raw:
-        for tag_item in tags_list_raw:
-            # 处理空标签情况（明确要清空标签）
-            if tag_item.strip() == '':
-                current_app.logger.info("[update_article_api] 检测到明确的空标签，将清空所有标签")
-                tags = []
-                break
-                
-            # 使用 re.split 来处理多个分隔符 (中英文逗号)
-            split_tags = [t.strip() for t in re.split(r'[,，]', tag_item) if t.strip()]
-            tags.extend(split_tags)
+    # 获取数据库连接URI
+    from app.config import get_database_uri
+    database_uri = get_database_uri()
     
-    # 调试日志：记录处理后的标签
-    current_app.logger.info(f"[update_article_api] 处理后的标签: {tags}")
-    current_app.logger.info(f"[update_article_api] 原有标签: {article.tags}")
-    
-    series_name = request.form.get('series_name')
-    series_order = request.form.get('series_order')
-    is_published_str = request.form.get('is_published') # 编辑时可能没有传
-    # cover_image 文件在 request.files['cover_image'] 中
-    
-    # 检查是否有任何有效数据被发送
-    if not request.form and not request.files:
-         return jsonify({'error': '没有提供要更新的数据'}), 400
-
-    needs_vector_update = False
-    # 更新字段
-    if title is not None and title != article.title:
-        article.title = title
-        # 考虑是否需要更新 slug
-        needs_vector_update = True 
-    if content is not None and content != article.content:
-        article.content = content
-        needs_vector_update = True
-    if summary is not None:
-        article.summary = summary
-        needs_vector_update = True # 摘要也可能影响向量
-    if category is not None:
-        article.category = category
-    
-    # 标签处理 - 确保明确处理标签更新
-    # 即使tags为空列表也进行更新（表示清空标签）
-    article.tags = tags
-    current_app.logger.info(f"[update_article_api] 更新后的标签: {article.tags}")
-    
-    # 处理发布状态
-    if is_published_str is not None:
-         article.is_published = is_published_str.lower() == 'true'
-         
-    # 处理系列更新
-    if 'series_name' in request.form: # 检查 key 是否存在于 form 中
-        new_series_name = request.form.get('series_name')
-        article.series_name = new_series_name if new_series_name else None
-        if not article.series_name:
-             article.series_order = None # 如果系列被移除，清除顺序
-             
-    if 'series_order' in request.form and article.series_name:
-         try:
-             article.series_order = int(request.form['series_order'])
-         except (ValueError, TypeError): 
-             pass
-
-    # 处理封面图片更新 - 修复：检查正确的字段名 'cover_image'
-    if 'cover_image' in request.files:
-        cover_file = request.files['cover_image']
-        if cover_file.filename != '':
-             # 记录日志，帮助调试
-             current_app.logger.info(f"处理编辑文章的封面图片: {cover_file.filename}, 大小: {cover_file.content_length} 字节")
-             
-             # 删除旧封面图 (如果存在)
-             if article.cover_image:
-                 try:
-                     # 判断路径类型
-                     if article.cover_image.startswith('http'):
-                         # 删除腾讯云COS中的图片
-                         cos_storage.delete_file(article.cover_image)
-                     else:
-                         # 删除本地文件
-                         old_file_rel_path = article.cover_image.replace('/static/uploads/', '', 1)
-                         old_file_abs_path = os.path.join(current_app.config['UPLOAD_FOLDER'], old_file_rel_path)
-                         if os.path.exists(old_file_abs_path):
-                             os.remove(old_file_abs_path)
-                 except Exception as e:
-                     current_app.logger.error(f"Error deleting old cover image {article.cover_image}: {e}")
-                     
-             # 保存新封面图
-             saved_path = save_image(cover_file, subfolder='covers')
-             if saved_path:
-                 current_app.logger.info(f"新封面图片已保存: {saved_path}")
-                 # 如果是COS URL，直接使用完整URL
-                 if saved_path.startswith('http'):
-                     article.cover_image = saved_path
-                 else:
-                     # 本地路径 - 添加前缀
-                     article.cover_image = saved_path  # 注意这里不再添加前缀
-             else:
-                 # 保存失败，记录错误日志
-                 current_app.logger.error(f"新封面图片 '{cover_file.filename}' 保存失败")
-                 return jsonify({'error': '封面图片保存失败'}), 500
-        # 注意：如果 request.files['cover_image'] 存在但 filename 为空，表示字段存在但没有选文件，则不做任何操作，保持原图
-    
-    # 处理前端发送的现有封面图片 URL
-    elif 'existing_cover_image' in request.form and request.form.get('keep_cover_image') == 'true':
-        existing_cover_image = request.form.get('existing_cover_image')
-        if existing_cover_image:
-            current_app.logger.info(f"保留现有封面图片: {existing_cover_image}")
-            article.cover_image = existing_cover_image
-
+    # 创建引擎和会话工厂
     try:
-        db.session.commit()
-        current_app.logger.info(f"文章更新成功: ID={article.id}, slug={article.slug}, 封面图片={article.cover_image}")
-        # if needs_vector_update:
-        #    VectorStore.update_article_embedding(article.id) # --- 注释掉向量嵌入调用 ---
+        engine = create_engine(database_uri, pool_pre_ping=True)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        current_app.logger.info(f"已创建新会话处理文章更新: slug={slug}")
+    except Exception as e:
+        current_app.logger.error(f"创建数据库会话失败: {e}")
+        return jsonify({'error': '数据库连接失败，请稍后重试'}), 500
+    
+    try:
+        # 在新会话中查询文章
+        from app.models import Article
+        article = session.query(Article).filter_by(slug=slug, is_deleted=False).first()
+        if not article:
+            session.close()
+            return jsonify({'error': '文章不存在或已被删除'}), 404
+            
+        # 权限检查
+        if article.user_id != current_user_id:
+            session.close()
+            return jsonify({'error': '无权修改此文章'}), 403
+            
+        # 使用request获取表单数据 (与之前相同)
+        title = request.form.get('title')
+        content = request.form.get('content')
+        summary = request.form.get('summary')
+        category = request.form.get('category')
         
-        # 添加：在更新文章后失效文章列表缓存
+        # 获取并处理标签
+        current_app.logger.info("开始处理文章标签")
+        tags_list_raw = request.form.getlist('tags') # 获取tag列表
+        tags = []
+        if tags_list_raw:
+            for tag_item in tags_list_raw:
+                # 处理空标签情况（明确要清空标签）
+                if tag_item.strip() == '':
+                    current_app.logger.info("[update_article_api] 检测到明确的空标签，将清空所有标签")
+                    tags = []
+                    break
+                    
+                # 使用re.split来处理多个分隔符(中英文逗号)
+                import re
+                split_tags = [t.strip() for t in re.split(r'[,，]', tag_item) if t.strip()]
+                tags.extend(split_tags)
+        
+        # 处理系列信息
+        series_name = request.form.get('series_name')
+        series_order = request.form.get('series_order')
+        is_published_str = request.form.get('is_published')
+        
+        # 准备更新数据
+        current_app.logger.info(f"准备更新文章数据: ID={article.id}")
+        
+        # 更新文章内容字段
+        if title is not None:
+            article.title = title
+        if content is not None:
+            article.content = content
+        if summary is not None:
+            article.summary = summary
+        if category is not None:
+            article.category = category
+            
+        # 设置标签
+        article.tags = tags
+        
+        # 处理发布状态
+        if is_published_str is not None:
+            article.is_published = is_published_str.lower() == 'true'
+            
+        # 处理系列更新
+        if 'series_name' in request.form:
+            new_series_name = request.form.get('series_name')
+            article.series_name = new_series_name if new_series_name else None
+            if not article.series_name:
+                article.series_order = None
+                
+        if 'series_order' in request.form and article.series_name:
+            try:
+                article.series_order = int(request.form['series_order'])
+            except (ValueError, TypeError):
+                pass
+                
+        # 处理封面图片更新
+        if 'cover_image' in request.files:
+            cover_file = request.files['cover_image']
+            if cover_file.filename != '':
+                # 处理封面图片更新
+                current_app.logger.info(f"处理封面图片: {cover_file.filename}")
+                # 删除旧封面图(如果存在)
+                if article.cover_image:
+                    try:
+                        # 删除旧图片的逻辑(保持不变)
+                        if article.cover_image.startswith('http'):
+                            from app.utils.cos_storage import cos_storage
+                            cos_storage.delete_file(article.cover_image)
+                        else:
+                            import os
+                            old_file_rel_path = article.cover_image.replace('/static/uploads/', '', 1)
+                            old_file_abs_path = os.path.join(current_app.config['UPLOAD_FOLDER'], old_file_rel_path)
+                            if os.path.exists(old_file_abs_path):
+                                os.remove(old_file_abs_path)
+                    except Exception as e:
+                        current_app.logger.error(f"删除旧封面图片失败: {e}")
+                
+                # 保存新封面图
+                saved_path = save_image(cover_file, subfolder='covers')
+                if saved_path:
+                    article.cover_image = saved_path
+                else:
+                    session.close()
+                    return jsonify({'error': '封面图片保存失败'}), 500
+                    
+        # 处理前端发送的现有封面图片URL
+        elif 'existing_cover_image' in request.form and request.form.get('keep_cover_image') == 'true':
+            existing_cover_image = request.form.get('existing_cover_image')
+            if existing_cover_image:
+                article.cover_image = existing_cover_image
+                
+        # 更新时间戳
+        from datetime import datetime
+        article.updated_at = datetime.utcnow()
+                
+        # 提交更改
+        current_app.logger.info(f"提交文章更新: ID={article.id}")
+        session.commit()
+        
+        # 提交成功后，获取更新后的文章数据
+        session.refresh(article)
+        article_data = article.to_dict()
+        
+        # 关闭会话
+        session.close()
+        
+        # 使用缓存失效函数清除缓存
+        from app.utils.article_utils import invalidate_article_list_cache
         invalidate_article_list_cache()
         
-        return jsonify(article.to_dict())
+        current_app.logger.info(f"文章更新成功: ID={article_data['id']}, slug={article_data['slug']}")
+        return jsonify(article_data)
+        
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error updating article {slug} in DB: {e}")
-        return jsonify({'error': '数据库错误，无法更新文章'}), 500
+        # 确保任何异常情况下都会回滚并关闭会话
+        try:
+            session.rollback()
+        except:
+            pass
+            
+        try:
+            session.close()
+        except:
+            pass
+            
+        # 详细记录错误信息
+        import traceback
+        error_details = traceback.format_exc()
+        current_app.logger.error(f"文章更新失败: {str(e)}\n{error_details}")
+        
+        return jsonify({'error': '数据库错误，无法更新文章，请稍后重试'}), 500
 
 @articles_bp.route('/<string:slug>', methods=['DELETE'])
 @jwt_required()

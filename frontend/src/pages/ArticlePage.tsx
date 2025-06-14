@@ -771,11 +771,11 @@ const ArticlePage: React.FC = () => {
               <div className="flex items-center space-x-4 flex-shrink-0">
                 {/* 编辑和删除按钮 */}
                 {canShowButtons && (
-                  <div className="flex items-center space-x-2 flex-shrink-0">
+                  <div className="flex items-center space-x-4 flex-shrink-0">
                     <button
                       onClick={() => navigate(`/edit-article/${slug}`)}
-                      className="px-3 py-1 text-xs font-medium text-gray-300 hover:text-white 
-                                 bg-transparent border border-gray-500/70 hover:border-white/70 
+                      className="px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-800
+                                 bg-transparent 
                                  rounded-full transition-all duration-200 
                                  disabled:opacity-50 disabled:cursor-not-allowed"
                       title="编辑文章"
@@ -785,8 +785,8 @@ const ArticlePage: React.FC = () => {
                     </button>
                     <button
                       onClick={handleDeleteArticle}
-                      className="px-3 py-1 text-xs font-medium text-gray-300 hover:text-white 
-                                 bg-transparent border border-gray-500/70 hover:border-white/70 
+                      className="px-4 py-1.5 text-sm font-medium text-white 
+                                 bg-gray-600 hover:bg-gray-700
                                  rounded-full transition-all duration-200 
                                  disabled:opacity-50 disabled:cursor-not-allowed"
                       title="删除文章"

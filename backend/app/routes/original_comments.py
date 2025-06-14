@@ -712,4 +712,4 @@ def update_article_comment(article_id, comment_id):
         db.session.rollback()
         current_app.logger.error(f"编辑文章评论时出错 (Article ID: {article_id}, Comment ID: {comment_id}): {e}", exc_info=True)
         return jsonify({"error": f"编辑评论失败: {str(e)}"}), 500
-# --- 结束新增 ---
+# --- 结束新增 --- 
